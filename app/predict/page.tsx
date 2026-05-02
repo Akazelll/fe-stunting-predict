@@ -1,70 +1,126 @@
 "use client";
 
 import { useState } from "react";
-import { cn } from "@/lib/utils";
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Types
-// ─────────────────────────────────────────────────────────────────────────────
-interface FormData {
-  sex: "0" | "1"; // 0 = female, 1 = male
-  asi_eksklusif: "0" | "1"; // 0 = no, 1 = yes
-  age: string;
-  birth_weight: string;
-  birth_length: string;
-  body_weight: string;
-  body_length: string;
+// ── Types ──────────────────────────────────────────────────────────────────────
+
+interface PredictInput {
+  Sex: "Male" | "Female";
+  Age: number;
+  Birth_Weight: number;
+  Birth_Length: number;
+  Body_Weight: number;
+  Body_Length: number;
+  ASI_Eksklusif: "Yes" | "No";
+}
+
+interface WhoFlags {
+  length_for_age_z: number;
+  weight_for_age_z: number;
+  stunting_who_indicator: 0 | 1;
+  severe_stunting: 0 | 1;
+  underweight: 0 | 1;
+  low_birth_weight: 0 | 1;
 }
 
 interface PredictResult {
-  prediction: string;
-  is_stunting: boolean;
-  stunting_probability: number;
-  risk_level: "Rendah" | "Sedang" | "Tinggi";
-  probabilities: Record<string, number>;
+  prediction: 0 | 1;
+  label: string;
+  probability: {
+    stunting: number;
+    tidak_stunting: number;
+  };
+  risk_level: "LOW" | "MEDIUM" | "HIGH";
+  who_flags: WhoFlags;
   model_used: string;
-  input_received: Record<string, unknown>;
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Sub-components
-// ─────────────────────────────────────────────────────────────────────────────
-function ToggleGroup({
+// ── Constants ──────────────────────────────────────────────────────────────────
+
+const API_BASE = "https://akazelll-stunting-predict.hf.space";
+
+const INITIAL_FORM: PredictInput = {
+  Sex: "Male",
+  Age: 12,
+  Birth_Weight: 3.0,
+  Birth_Length: 50,
+  Body_Weight: 8.0,
+  Body_Length: 72,
+  ASI_Eksklusif: "Yes",
+};
+
+// ── Sub-components ─────────────────────────────────────────────────────────────
+
+function ProbabilityBar({
   label,
-  name,
-  options,
   value,
-  onChange,
+  color,
 }: {
   label: string;
-  name: string;
-  options: { label: string; value: string; icon?: string }[];
-  value: string;
-  onChange: (v: string) => void;
+  value: number;
+  color: string;
 }) {
+  const pct = Math.round(value * 100);
   return (
-    <div className='space-y-2'>
-      <label className='block text-sm font-black uppercase tracking-widest text-black'>
-        {label}
-      </label>
-      <div className='flex flex-wrap gap-4 sm:flex-nowrap'>
-        {options.map((opt) => (
-          <button
-            key={opt.value}
-            type='button'
-            onClick={() => onChange(opt.value)}
-            className={cn(
-              "flex-1 flex items-center justify-center gap-2 border-4 border-black py-3 px-4 text-sm font-black transition-all rounded-none",
-              value === opt.value
-                ? "bg-[#a3e635] text-black translate-x-[4px] translate-y-[4px] shadow-none"
-                : "bg-white text-black shadow-[4px_4px_0px_0px_#000] hover:bg-[#fef08a] active:translate-x-[4px] active:translate-y-[4px] active:shadow-none",
-            )}
-          >
-            {opt.icon && <span className='text-lg'>{opt.icon}</span>}
-            {opt.label}
-          </button>
-        ))}
+    <div className='mb-3'>
+      <div className='flex justify-between mb-1'>
+        <span className='text-sm font-medium text-slate-700'>{label}</span>
+        <span className='text-sm font-bold' style={{ color }}>
+          {pct}%
+        </span>
       </div>
+      <div className='w-full bg-slate-100 rounded-full h-3 overflow-hidden'>
+        <div
+          className='h-3 rounded-full transition-all duration-700 ease-out'
+          style={{ width: `${pct}%`, backgroundColor: color }}
+        />
+      </div>
+    </div>
+  );
+}
+
+function WhoFlagBadge({
+  label,
+  value,
+  isRisk,
+}: {
+  label: string;
+  value: number;
+  isRisk: boolean;
+}) {
+  const active = value === 1;
+  return (
+    <div
+      className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm ${
+        active && isRisk
+          ? "bg-red-50 border border-red-200 text-red-700"
+          : active
+            ? "bg-amber-50 border border-amber-200 text-amber-700"
+            : "bg-slate-50 border border-slate-200 text-slate-500"
+      }`}
+    >
+      <span
+        className={`w-2 h-2 rounded-full flex-shrink-0 ${active && isRisk ? "bg-red-500" : active ? "bg-amber-400" : "bg-slate-300"}`}
+      />
+      {label}
+    </div>
+  );
+}
+
+function ZScoreBadge({ label, value }: { label: string; value: number }) {
+  const color =
+    value < -3
+      ? "bg-red-100 text-red-700 border-red-200"
+      : value < -2
+        ? "bg-orange-100 text-orange-700 border-orange-200"
+        : "bg-green-100 text-green-700 border-green-200";
+
+  return (
+    <div
+      className={`flex justify-between items-center px-3 py-2 rounded-lg border text-sm ${color}`}
+    >
+      <span className='font-medium'>{label}</span>
+      <span className='font-bold tabular-nums'>{value.toFixed(2)}</span>
     </div>
   );
 }
@@ -74,436 +130,569 @@ function InputField({
   name,
   value,
   onChange,
-  unit,
+  type = "number",
   min,
   max,
   step,
-  placeholder,
+  unit,
   hint,
 }: {
   label: string;
-  name: string;
-  value: string;
-  onChange: (v: string) => void;
-  unit: string;
-  min: number;
-  max: number;
+  name: keyof PredictInput;
+  value: number | string;
+  onChange: (name: keyof PredictInput, val: string) => void;
+  type?: string;
+  min?: number;
+  max?: number;
   step?: number;
-  placeholder?: string;
+  unit?: string;
   hint?: string;
 }) {
   return (
-    <div className='space-y-2'>
-      <label className='block text-sm font-black uppercase tracking-widest text-black'>
+    <div>
+      <label className='block text-sm font-semibold text-slate-700 mb-1'>
         {label}
+        {unit && (
+          <span className='ml-1 text-xs font-normal text-slate-400'>
+            ({unit})
+          </span>
+        )}
       </label>
-      <div className='relative'>
-        <input
-          type='number'
-          name={name}
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          min={min}
-          max={max}
-          step={step ?? 0.1}
-          placeholder={placeholder ?? `${min}–${max}`}
-          className={cn(
-            "w-full rounded-none border-4 border-black bg-white px-4 py-3 pr-16",
-            "text-base font-bold text-black placeholder-gray-400 shadow-[4px_4px_0px_0px_#000]",
-            "transition-all outline-none",
-            "focus:translate-x-[4px] focus:translate-y-[4px] focus:shadow-none focus:bg-[#e0f2fe]",
-          )}
-        />
-        <span className='absolute right-4 top-1/2 -translate-y-1/2 text-sm font-black text-black bg-white px-1'>
-          {unit}
-        </span>
-      </div>
-      {hint && <p className='text-xs font-bold text-gray-700'>{hint}</p>}
+      {hint && <p className='text-xs text-slate-400 mb-1'>{hint}</p>}
+      <input
+        type={type}
+        min={min}
+        max={max}
+        step={step}
+        value={value}
+        onChange={(e) => onChange(name, e.target.value)}
+        className='w-full px-3 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-800
+          focus:outline-none focus:ring-2 focus:ring-teal-400 focus:border-transparent
+          text-sm transition placeholder-slate-300'
+      />
     </div>
   );
 }
 
-function RiskBadge({ level }: { level: "Rendah" | "Sedang" | "Tinggi" }) {
-  const config = {
-    Rendah: { bg: "bg-[#a3e635]", label: "RISIKO RENDAH" },
-    Sedang: { bg: "bg-[#fde047]", label: "RISIKO SEDANG" },
-    Tinggi: { bg: "bg-[#f87171]", label: "RISIKO TINGGI" },
-  }[level];
-
-  return (
-    <span
-      className={cn(
-        "inline-flex items-center gap-1.5 border-4 border-black px-4 py-1.5 text-sm font-black text-black shadow-[4px_4px_0px_0px_#000] rounded-none",
-        config.bg,
-      )}
-    >
-      {config.label}
-    </span>
-  );
-}
-
-function ProbabilityBar({
+function SelectField({
   label,
+  name,
   value,
-  isMain,
+  options,
+  onChange,
+  hint,
 }: {
   label: string;
-  value: number;
-  isMain: boolean;
+  name: keyof PredictInput;
+  value: string;
+  options: { label: string; value: string }[];
+  onChange: (name: keyof PredictInput, val: string) => void;
+  hint?: string;
 }) {
   return (
-    <div className='space-y-1.5'>
-      <div className='flex justify-between text-sm font-black text-black'>
-        <span className='uppercase'>{label}</span>
-        <span>{(value * 100).toFixed(1)}%</span>
-      </div>
-      <div className='h-6 w-full overflow-hidden border-4 border-black bg-white rounded-none'>
-        <div
-          className={cn(
-            "h-full border-r-4 border-black transition-all duration-500",
-            isMain ? "bg-[#38bdf8]" : "bg-[#fde047]",
-          )}
-          style={{ width: `${value * 100}%` }}
-        />
-      </div>
+    <div>
+      <label className='block text-sm font-semibold text-slate-700 mb-1'>
+        {label}
+      </label>
+      {hint && <p className='text-xs text-slate-400 mb-1'>{hint}</p>}
+      <select
+        value={value}
+        onChange={(e) => onChange(name, e.target.value)}
+        className='w-full px-3 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-800
+          focus:outline-none focus:ring-2 focus:ring-teal-400 focus:border-transparent
+          text-sm transition appearance-none cursor-pointer'
+      >
+        {options.map((o) => (
+          <option key={o.value} value={o.value}>
+            {o.label}
+          </option>
+        ))}
+      </select>
     </div>
   );
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Main Page
-// ─────────────────────────────────────────────────────────────────────────────
-const INITIAL_FORM: FormData = {
-  sex: "1",
-  asi_eksklusif: "1",
-  age: "",
-  birth_weight: "",
-  birth_length: "",
-  body_weight: "",
-  body_length: "",
-};
+// ── Main Page ──────────────────────────────────────────────────────────────────
 
 export default function PredictPage() {
-  const [form, setForm] = useState<FormData>(INITIAL_FORM);
+  const [form, setForm] = useState<PredictInput>(INITIAL_FORM);
   const [result, setResult] = useState<PredictResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const setField = (key: keyof FormData) => (value: string) =>
-    setForm((prev) => ({ ...prev, [key]: value }));
+  const handleChange = (name: keyof PredictInput, val: string) => {
+    setForm((prev) => ({
+      ...prev,
+      [name]:
+        name === "Sex" || name === "ASI_Eksklusif"
+          ? val
+          : val === ""
+            ? ""
+            : parseFloat(val),
+    }));
+  };
 
-  const requiredFields: (keyof FormData)[] = [
-    "age",
-    "birth_weight",
-    "birth_length",
-    "body_weight",
-    "body_length",
-  ];
-  const isFormValid = requiredFields.every(
-    (f) => form[f] !== "" && !isNaN(Number(form[f])),
-  );
-
-  async function handleSubmit(e: React.FormEvent) {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!isFormValid) return;
-
     setLoading(true);
     setError(null);
     setResult(null);
 
     try {
-      const res = await fetch("/api/predict", {
+      const res = await fetch(`${API_BASE}/predict`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(form),
       });
 
-      const data = await res.json();
-
       if (!res.ok) {
-        throw new Error(data.error ?? "Prediksi gagal");
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(
+          errData?.detail || `Server error: ${res.status} ${res.statusText}`,
+        );
       }
 
-      setResult(data as PredictResult);
-
-      setTimeout(() => {
-        document
-          .getElementById("result-section")
-          ?.scrollIntoView({ behavior: "smooth", block: "start" });
-      }, 100);
-    } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Terjadi kesalahan tidak terduga",
-      );
+      const data: PredictResult = await res.json();
+      setResult(data);
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError("Terjadi kesalahan tidak dikenal.");
+      }
     } finally {
       setLoading(false);
     }
-  }
+  };
 
-  function handleReset() {
+  const handleReset = () => {
     setForm(INITIAL_FORM);
     setResult(null);
     setError(null);
-  }
+  };
+
+  const riskConfig = {
+    LOW: {
+      label: "RISIKO RENDAH",
+      bg: "bg-emerald-50",
+      border: "border-emerald-300",
+      text: "text-emerald-700",
+      badge: "bg-emerald-500",
+      icon: "✓",
+      desc: "Pertumbuhan anak tergolong normal. Tetap pantau tumbuh kembang secara rutin.",
+    },
+    MEDIUM: {
+      label: "RISIKO SEDANG",
+      bg: "bg-amber-50",
+      border: "border-amber-300",
+      text: "text-amber-700",
+      badge: "bg-amber-500",
+      icon: "!",
+      desc: "Terdapat indikasi risiko stunting. Konsultasikan dengan tenaga kesehatan.",
+    },
+    HIGH: {
+      label: "RISIKO TINGGI",
+      bg: "bg-red-50",
+      border: "border-red-300",
+      text: "text-red-700",
+      badge: "bg-red-500",
+      icon: "✕",
+      desc: "Anak terindikasi stunting. Segera konsultasikan dengan dokter atau ahli gizi.",
+    },
+  };
 
   return (
-    <div className='min-h-screen bg-[#f4f4f0] font-sans selection:bg-[#fde047] selection:text-black'>
-      {/* ── Background Dotted Pattern ── */}
-      <div
-        className='fixed inset-0 pointer-events-none opacity-30'
-        style={{
-          backgroundImage: "radial-gradient(#000 2px, transparent 2px)",
-          backgroundSize: "24px 24px",
-        }}
-      />
-
-      <div className='relative mx-auto max-w-3xl px-4 py-12 sm:px-6'>
-        {/* ── Header ── */}
-        <div className='mb-10 flex flex-col items-center text-center'>
-          <div className='mb-6 flex h-24 w-24 items-center justify-center border-4 border-black bg-[#ff90e8] text-5xl shadow-[8px_8px_0px_0px_#000] rotate-3 rounded-none'>
-            👶
+    <div className='min-h-screen bg-gradient-to-br from-slate-50 via-teal-50/30 to-slate-100'>
+      {/* Header */}
+      <header className='sticky top-0 z-10 bg-white/80 backdrop-blur border-b border-slate-200/70'>
+        <div className='max-w-5xl mx-auto px-4 py-3 flex items-center gap-3'>
+          <div className='w-9 h-9 rounded-xl bg-teal-600 flex items-center justify-center text-white font-bold text-sm'>
+            SP
           </div>
-          <h1 className='border-4 border-black bg-white px-8 py-3 text-4xl font-black uppercase tracking-tight text-black shadow-[8px_8px_0px_0px_#000] rounded-none'>
-            Deteksi Stunting
-          </h1>
-          <p className='mt-6 bg-[#fde047] px-4 py-2 text-sm font-black border-4 border-black shadow-[4px_4px_0px_0px_#000] rounded-none'>
-            STANDAR WHO · MACHINE LEARNING
+          <div>
+            <h1 className='text-sm font-bold text-slate-800 leading-none'>
+              Stunting Predict
+            </h1>
+            <p className='text-xs text-slate-400 mt-0.5'>
+              Deteksi dini risiko stunting anak
+            </p>
+          </div>
+        </div>
+      </header>
+
+      <main className='max-w-5xl mx-auto px-4 py-8 space-y-8'>
+        {/* Hero */}
+        <div className='text-center space-y-2'>
+          <h2 className='text-2xl font-extrabold text-slate-800 tracking-tight'>
+            Prediksi Status Stunting
+          </h2>
+          <p className='text-slate-500 text-sm max-w-xl mx-auto'>
+            Masukkan data antropometri anak untuk mendapatkan prediksi risiko
+            stunting menggunakan model Machine Learning berbasis data 13.814
+            anak.
           </p>
         </div>
 
-        {/* ── Form Card ── */}
-        <form onSubmit={handleSubmit} noValidate>
-          <div className='mb-12 border-4 border-black bg-white shadow-[12px_12px_0px_0px_#000] rounded-none'>
-            {/* Identitas */}
-            <div className='border-b-4 border-black bg-[#38bdf8] px-6 py-4'>
-              <h2 className='text-xl font-black uppercase tracking-widest text-black'>
-                [ 1 ] Identitas Anak
-              </h2>
-            </div>
-            <div className='space-y-6 px-6 py-8'>
-              <ToggleGroup
-                label='Jenis Kelamin'
-                name='sex'
-                value={form.sex}
-                onChange={setField("sex")}
-                options={[
-                  { label: "LAKI-LAKI", value: "1", icon: "♂" },
-                  { label: "PEREMPUAN", value: "0", icon: "♀" },
-                ]}
-              />
-              <ToggleGroup
-                label='ASI Eksklusif'
-                name='asi_eksklusif'
-                value={form.asi_eksklusif}
-                onChange={setField("asi_eksklusif")}
-                options={[
-                  { label: "YA", value: "1", icon: "✓" },
-                  { label: "TIDAK", value: "0", icon: "✗" },
-                ]}
-              />
-              <InputField
-                label='Usia Anak'
-                name='age'
-                value={form.age}
-                onChange={setField("age")}
-                unit='BLN'
-                min={0}
-                max={60}
-                step={1}
-                placeholder='0 – 60'
-                hint='* UMUR DALAM BULAN (MAKS. 60 BULAN)'
-              />
-            </div>
+        <div className='grid grid-cols-1 lg:grid-cols-5 gap-6'>
+          {/* ── Form ── */}
+          <div className='lg:col-span-3'>
+            <form
+              onSubmit={handleSubmit}
+              className='bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden'
+            >
+              {/* Form Header */}
+              <div className='px-6 py-4 border-b border-slate-100 bg-slate-50/50'>
+                <h3 className='font-bold text-slate-700 text-sm uppercase tracking-wider'>
+                  Data Anak
+                </h3>
+              </div>
 
-            {/* Data Lahir */}
-            <div className='border-b-4 border-t-4 border-black bg-[#ff90e8] px-6 py-4'>
-              <h2 className='text-xl font-black uppercase tracking-widest text-black'>
-                [ 2 ] Data Saat Lahir
-              </h2>
-            </div>
-            <div className='grid grid-cols-1 gap-6 px-6 py-8 sm:grid-cols-2'>
-              <InputField
-                label='Berat Lahir'
-                name='birth_weight'
-                value={form.birth_weight}
-                onChange={setField("birth_weight")}
-                unit='KG'
-                min={0.5}
-                max={6}
-                step={0.01}
-                placeholder='0.5 – 6.0'
-              />
-              <InputField
-                label='Panjang Lahir'
-                name='birth_length'
-                value={form.birth_length}
-                onChange={setField("birth_length")}
-                unit='CM'
-                min={30}
-                max={65}
-                step={0.1}
-                placeholder='30 – 65'
-              />
-            </div>
+              <div className='p-6 space-y-5'>
+                {/* Row 1 */}
+                <div className='grid grid-cols-2 gap-4'>
+                  <SelectField
+                    label='Jenis Kelamin'
+                    name='Sex'
+                    value={form.Sex}
+                    options={[
+                      { label: "Laki-laki", value: "Male" },
+                      { label: "Perempuan", value: "Female" },
+                    ]}
+                    onChange={handleChange}
+                  />
+                  <InputField
+                    label='Umur'
+                    name='Age'
+                    value={form.Age}
+                    onChange={handleChange}
+                    unit='bulan'
+                    min={1}
+                    max={60}
+                    step={1}
+                    hint='Rentang 1–60 bulan'
+                  />
+                </div>
 
-            {/* Data Sekarang */}
-            <div className='border-b-4 border-t-4 border-black bg-[#a3e635] px-6 py-4'>
-              <h2 className='text-xl font-black uppercase tracking-widest text-black'>
-                [ 3 ] Antropometri Sekarang
-              </h2>
-            </div>
-            <div className='grid grid-cols-1 gap-6 px-6 py-8 sm:grid-cols-2'>
-              <InputField
-                label='Berat Badan'
-                name='body_weight'
-                value={form.body_weight}
-                onChange={setField("body_weight")}
-                unit='KG'
-                min={1}
-                max={30}
-                step={0.01}
-                placeholder='1.0 – 30.0'
-              />
-              <InputField
-                label='Tinggi Badan'
-                name='body_length'
-                value={form.body_length}
-                onChange={setField("body_length")}
-                unit='CM'
-                min={40}
-                max={130}
-                step={0.1}
-                placeholder='40 – 130'
-              />
-            </div>
+                {/* Divider */}
+                <div className='flex items-center gap-3'>
+                  <div className='flex-1 h-px bg-slate-100' />
+                  <span className='text-xs text-slate-400 font-medium'>
+                    DATA LAHIR
+                  </span>
+                  <div className='flex-1 h-px bg-slate-100' />
+                </div>
 
+                {/* Row 2 */}
+                <div className='grid grid-cols-2 gap-4'>
+                  <InputField
+                    label='Berat Lahir'
+                    name='Birth_Weight'
+                    value={form.Birth_Weight}
+                    onChange={handleChange}
+                    unit='kg'
+                    min={0}
+                    max={10}
+                    step={0.1}
+                    hint='Contoh: 3.2'
+                  />
+                  <InputField
+                    label='Panjang Lahir'
+                    name='Birth_Length'
+                    value={form.Birth_Length}
+                    onChange={handleChange}
+                    unit='cm'
+                    min={30}
+                    max={70}
+                    step={0.1}
+                    hint='Contoh: 50'
+                  />
+                </div>
+
+                {/* Divider */}
+                <div className='flex items-center gap-3'>
+                  <div className='flex-1 h-px bg-slate-100' />
+                  <span className='text-xs text-slate-400 font-medium'>
+                    DATA SAAT INI
+                  </span>
+                  <div className='flex-1 h-px bg-slate-100' />
+                </div>
+
+                {/* Row 3 */}
+                <div className='grid grid-cols-2 gap-4'>
+                  <InputField
+                    label='Berat Badan'
+                    name='Body_Weight'
+                    value={form.Body_Weight}
+                    onChange={handleChange}
+                    unit='kg'
+                    min={0}
+                    max={30}
+                    step={0.1}
+                    hint='Berat saat ini'
+                  />
+                  <InputField
+                    label='Tinggi Badan'
+                    name='Body_Length'
+                    value={form.Body_Length}
+                    onChange={handleChange}
+                    unit='cm'
+                    min={30}
+                    max={130}
+                    step={0.1}
+                    hint='Panjang/tinggi saat ini'
+                  />
+                </div>
+
+                {/* ASI */}
+                <SelectField
+                  label='ASI Eksklusif'
+                  name='ASI_Eksklusif'
+                  value={form.ASI_Eksklusif}
+                  options={[
+                    { label: "Ya — mendapat ASI eksklusif", value: "Yes" },
+                    {
+                      label: "Tidak — tidak mendapat ASI eksklusif",
+                      value: "No",
+                    },
+                  ]}
+                  onChange={handleChange}
+                  hint='Pemberian ASI eksklusif selama 6 bulan pertama'
+                />
+              </div>
+
+              {/* Form Footer */}
+              <div className='px-6 pb-6 flex gap-3'>
+                <button
+                  type='submit'
+                  disabled={loading}
+                  className='flex-1 py-3 rounded-xl bg-teal-600 hover:bg-teal-700 active:scale-[0.98]
+                    text-white font-bold text-sm transition-all shadow-sm disabled:opacity-60
+                    disabled:cursor-not-allowed flex items-center justify-center gap-2'
+                >
+                  {loading ? (
+                    <>
+                      <svg
+                        className='animate-spin w-4 h-4'
+                        fill='none'
+                        viewBox='0 0 24 24'
+                      >
+                        <circle
+                          className='opacity-25'
+                          cx='12'
+                          cy='12'
+                          r='10'
+                          stroke='currentColor'
+                          strokeWidth='4'
+                        />
+                        <path
+                          className='opacity-75'
+                          fill='currentColor'
+                          d='M4 12a8 8 0 018-8v8z'
+                        />
+                      </svg>
+                      Menganalisis...
+                    </>
+                  ) : (
+                    "Prediksi Sekarang"
+                  )}
+                </button>
+                <button
+                  type='button'
+                  onClick={handleReset}
+                  className='px-4 py-3 rounded-xl border border-slate-200 text-slate-500
+                    hover:bg-slate-50 text-sm font-medium transition-all'
+                >
+                  Reset
+                </button>
+              </div>
+            </form>
+          </div>
+
+          {/* ── Result Panel ── */}
+          <div className='lg:col-span-2 space-y-4'>
             {/* Error */}
             {error && (
-              <div className='border-t-4 border-black bg-[#f87171] px-6 py-5'>
-                <h3 className='text-xl font-black uppercase text-black'>
-                  ERROR: PREDIKSI GAGAL
-                </h3>
-                <p className='font-bold text-black border-2 border-black bg-white p-2 mt-2 inline-block shadow-[4px_4px_0px_0px_#000]'>
-                  {error}
+              <div className='bg-red-50 border border-red-200 rounded-2xl p-4'>
+                <div className='flex items-start gap-3'>
+                  <span className='text-red-500 text-lg mt-0.5'>⚠</span>
+                  <div>
+                    <p className='font-bold text-red-700 text-sm'>
+                      Gagal memproses
+                    </p>
+                    <p className='text-red-600 text-xs mt-1 leading-relaxed'>
+                      {error}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Placeholder */}
+            {!result && !loading && !error && (
+              <div className='bg-white rounded-2xl border border-slate-200 border-dashed p-8 text-center space-y-3'>
+                <div className='w-14 h-14 rounded-2xl bg-slate-100 flex items-center justify-center mx-auto text-2xl'>
+                  🧒
+                </div>
+                <p className='text-sm text-slate-400 leading-relaxed'>
+                  Isi form di sebelah kiri dan klik{" "}
+                  <strong>Prediksi Sekarang</strong> untuk melihat hasil
+                  analisis.
                 </p>
               </div>
             )}
 
-            {/* Submit */}
-            <div className='flex flex-col gap-4 border-t-4 border-black bg-gray-100 p-6 sm:flex-row'>
-              <button
-                type='submit'
-                disabled={!isFormValid || loading}
-                className={cn(
-                  "flex-1 border-4 border-black py-4 text-xl font-black uppercase tracking-wider text-black transition-all rounded-none",
-                  isFormValid && !loading
-                    ? "bg-[#fde047] shadow-[8px_8px_0px_0px_#000] hover:bg-[#facc15] hover:translate-x-[4px] hover:translate-y-[4px] hover:shadow-[4px_4px_0px_0px_#000] active:translate-x-[8px] active:translate-y-[8px] active:shadow-none"
-                    : "cursor-not-allowed bg-gray-300 opacity-70",
-                )}
-              >
-                {loading ? "MEMPROSES..." : "ANALISIS SEKARANG ⚡"}
-              </button>
-              {(result || error) && (
-                <button
-                  type='button'
-                  onClick={handleReset}
-                  className='border-4 border-black bg-white px-8 py-4 text-xl font-black uppercase tracking-wider text-black shadow-[8px_8px_0px_0px_#000] transition-all hover:bg-gray-200 active:translate-x-[8px] active:translate-y-[8px] active:shadow-none rounded-none'
-                >
-                  RESET
-                </button>
-              )}
-            </div>
-          </div>
-        </form>
-
-        {/* ── Result Card ── */}
-        {result && (
-          <div
-            id='result-section'
-            className='mt-8 border-4 border-black bg-white shadow-[12px_12px_0px_0px_#000] rounded-none'
-          >
-            {/* Result header */}
-            <div
-              className={cn(
-                "border-b-4 border-black px-6 py-8 text-center",
-                result.is_stunting ? "bg-[#f87171]" : "bg-[#a3e635]",
-              )}
-            >
-              <p className='mb-3 text-sm font-black uppercase tracking-widest text-black bg-white inline-block px-3 py-1 border-4 border-black shadow-[4px_4px_0px_0px_#000]'>
-                HASIL ANALISIS
-              </p>
-              <h2 className='text-4xl sm:text-5xl font-black uppercase text-black'>
-                {result.is_stunting ? "⚠️ BERISIKO STUNTING" : "✅ NORMAL"}
-              </h2>
-            </div>
-
-            <div className='space-y-8 p-6'>
-              {/* Risk badge + probability */}
-              <div className='flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between border-4 border-black p-4 bg-[#f4f4f0] shadow-[6px_6px_0px_0px_#000]'>
-                <div className='space-y-3'>
-                  <p className='text-sm font-black uppercase tracking-widest text-black'>
-                    TINGKAT RISIKO
-                  </p>
-                  <RiskBadge level={result.risk_level} />
+            {/* Loading skeleton */}
+            {loading && (
+              <div className='bg-white rounded-2xl border border-slate-200 p-6 space-y-4 animate-pulse'>
+                <div className='h-5 bg-slate-100 rounded-lg w-3/4' />
+                <div className='h-12 bg-slate-100 rounded-xl' />
+                <div className='space-y-2'>
+                  <div className='h-3 bg-slate-100 rounded w-full' />
+                  <div className='h-3 bg-slate-100 rounded w-5/6' />
                 </div>
-                <div className='sm:text-right'>
-                  <p className='text-sm font-black uppercase tracking-widest text-black mb-1'>
-                    PROBABILITAS
-                  </p>
-                  <p className='inline-block border-4 border-black bg-[#e0f2fe] px-4 py-2 text-5xl font-black shadow-[6px_6px_0px_0px_#000]'>
-                    {(result.stunting_probability * 100).toFixed(1)}%
-                  </p>
-                </div>
-              </div>
-
-              {/* Probability bars */}
-              <div className='space-y-4 border-4 border-black p-4 bg-white shadow-[6px_6px_0px_0px_#000]'>
-                <p className='text-sm font-black uppercase tracking-widest text-black border-b-4 border-black pb-2 mb-4'>
-                  DISTRIBUSI PROBABILITAS
-                </p>
-                {Object.entries(result.probabilities)
-                  .sort(([a], [b]) => a.localeCompare(b))
-                  .map(([label, value]) => (
-                    <ProbabilityBar
-                      key={label}
-                      label={label}
-                      value={value}
-                      isMain={label === result.prediction}
-                    />
+                <div className='grid grid-cols-2 gap-2'>
+                  {[0, 1, 2, 3].map((i) => (
+                    <div key={i} className='h-8 bg-slate-100 rounded-lg' />
                   ))}
+                </div>
               </div>
+            )}
 
-              {/* Interpretasi */}
-              <div
-                className={cn(
-                  "border-4 border-black p-6 shadow-[6px_6px_0px_0px_#000]",
-                  result.is_stunting ? "bg-[#fef2f2]" : "bg-[#f0fdf4]",
-                )}
-              >
-                <h3 className='mb-3 text-2xl font-black uppercase bg-white inline-block border-2 border-black px-2'>
-                  {result.is_stunting ? "PERLU PERHATIAN" : "KONDISI BAIK"}
-                </h3>
-                <p className='text-base font-bold text-black leading-relaxed'>
-                  {result.is_stunting
-                    ? "Anak menunjukkan indikasi risiko stunting berdasarkan data antropometri dan standar WHO. Segera konsultasikan dengan tenaga kesehatan atau dokter anak untuk evaluasi lebih lanjut."
-                    : "Berdasarkan data yang dimasukkan, anak tidak menunjukkan indikasi stunting. Tetap pantau tumbuh kembang secara rutin sesuai jadwal posyandu."}
-                </p>
-              </div>
+            {/* Result */}
+            {result && !loading && (
+              <>
+                {/* Risk Card */}
+                {(() => {
+                  const cfg = riskConfig[result.risk_level];
+                  return (
+                    <div
+                      className={`rounded-2xl border-2 p-5 ${cfg.bg} ${cfg.border}`}
+                    >
+                      <div className='flex items-center gap-3 mb-3'>
+                        <div
+                          className={`w-10 h-10 rounded-xl ${cfg.badge} flex items-center justify-center text-white font-black text-lg`}
+                        >
+                          {cfg.icon}
+                        </div>
+                        <div>
+                          <p
+                            className={`text-xs font-bold uppercase tracking-wider ${cfg.text} opacity-70`}
+                          >
+                            Hasil Prediksi
+                          </p>
+                          <p className={`font-extrabold text-base ${cfg.text}`}>
+                            {result.label}
+                          </p>
+                        </div>
+                        <span
+                          className={`ml-auto text-xs font-bold px-2.5 py-1 rounded-full ${cfg.badge} text-white`}
+                        >
+                          {cfg.label}
+                        </span>
+                      </div>
+                      <p
+                        className={`text-xs leading-relaxed ${cfg.text} opacity-80`}
+                      >
+                        {cfg.desc}
+                      </p>
+                    </div>
+                  );
+                })()}
 
-              {/* Footer info */}
-              <div className='border-t-4 border-black pt-4 font-black uppercase text-black flex flex-col sm:flex-row justify-between'>
-                <p>
-                  MODEL:{" "}
-                  <span className='bg-[#fde047] px-2 border-2 border-black ml-1'>
+                {/* Probability */}
+                <div className='bg-white rounded-2xl border border-slate-200 p-5'>
+                  <h4 className='text-xs font-bold text-slate-500 uppercase tracking-wider mb-4'>
+                    Distribusi Probabilitas
+                  </h4>
+                  <ProbabilityBar
+                    label='Stunting'
+                    value={result.probability?.stunting ?? 0}
+                    color='#ef4444'
+                  />
+                  <ProbabilityBar
+                    label='Tidak Stunting'
+                    value={result.probability?.tidak_stunting ?? 0}
+                    color='#10b981'
+                  />
+                </div>
+
+                {/* Z-Scores */}
+                <div className='bg-white rounded-2xl border border-slate-200 p-5'>
+                  <h4 className='text-xs font-bold text-slate-500 uppercase tracking-wider mb-3'>
+                    Z-Score WHO
+                  </h4>
+                  <div className='space-y-2'>
+                    <ZScoreBadge
+                      label='Panjang / Umur (LAZ)'
+                      value={result.who_flags.length_for_age_z}
+                    />
+                    <ZScoreBadge
+                      label='Berat / Umur (WAZ)'
+                      value={result.who_flags.weight_for_age_z}
+                    />
+                  </div>
+                  <p className='text-xs text-slate-400 mt-2'>
+                    Z-Score &lt; −2 = berisiko · &lt; −3 = sangat berisiko
+                  </p>
+                </div>
+
+                {/* WHO Flags */}
+                <div className='bg-white rounded-2xl border border-slate-200 p-5'>
+                  <h4 className='text-xs font-bold text-slate-500 uppercase tracking-wider mb-3'>
+                    Indikator WHO
+                  </h4>
+                  <div className='grid grid-cols-1 gap-2'>
+                    <WhoFlagBadge
+                      label='Indikator Stunting WHO'
+                      value={result.who_flags.stunting_who_indicator}
+                      isRisk
+                    />
+                    <WhoFlagBadge
+                      label='Stunting Berat'
+                      value={result.who_flags.severe_stunting}
+                      isRisk
+                    />
+                    <WhoFlagBadge
+                      label='Berat Badan Kurang'
+                      value={result.who_flags.underweight}
+                      isRisk
+                    />
+                    <WhoFlagBadge
+                      label='Berat Lahir Rendah'
+                      value={result.who_flags.low_birth_weight}
+                      isRisk={false}
+                    />
+                  </div>
+                </div>
+
+                {/* Footer note */}
+                <p className='text-center text-xs text-slate-400 pb-2'>
+                  Model:{" "}
+                  <code className='bg-slate-100 px-1.5 py-0.5 rounded text-slate-500'>
                     {result.model_used}
-                  </span>
+                  </code>{" "}
+                  · Hasil bukan pengganti diagnosis medis
                 </p>
-                <p className='mt-2 sm:mt-0'>* BUKAN DIAGNOSIS MEDIS</p>
-              </div>
-            </div>
+              </>
+            )}
           </div>
-        )}
-      </div>
+        </div>
+
+        {/* Info Banner */}
+        <div className='bg-teal-600 rounded-2xl p-5 flex flex-col sm:flex-row gap-4 items-start sm:items-center'>
+          <div className='w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center flex-shrink-0 text-white text-lg'>
+            ℹ
+          </div>
+          <div className='flex-1'>
+            <p className='text-white font-bold text-sm'>Tentang Prediksi Ini</p>
+            <p className='text-teal-100 text-xs mt-1 leading-relaxed'>
+              Sistem ini menggunakan model Machine Learning yang dilatih dengan
+              13.814 data anak. Prediksi bersifat indikatif dan tidak
+              menggantikan pemeriksaan medis oleh tenaga kesehatan profesional.
+            </p>
+          </div>
+        </div>
+      </main>
     </div>
   );
 }
