@@ -35,7 +35,6 @@ interface PredictResult {
   model_used: string;
 }
 
-// ── Constants ──────────────────────────────────────────────────────────────────
 
 const API_BASE = "https://akazelll-stunting-predict.hf.space";
 
@@ -62,16 +61,16 @@ function ProbabilityBar({
 }) {
   const pct = Math.round(value * 100);
   return (
-    <div className='mb-3'>
-      <div className='flex justify-between mb-1'>
-        <span className='text-sm font-medium text-slate-700'>{label}</span>
-        <span className='text-sm font-bold' style={{ color }}>
-          {pct}%
+    <div className='mb-4'>
+      <div className='flex justify-between mb-2 items-center'>
+        <span className='text-sm font-black text-black uppercase tracking-wide bg-white px-2 py-0.5 border-2 border-black'>
+          {label}
         </span>
+        <span className='text-base font-black text-black'>{pct}%</span>
       </div>
-      <div className='w-full bg-slate-100 rounded-full h-3 overflow-hidden'>
+      <div className='w-full bg-white border-4 border-black h-5 rounded-none shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] overflow-hidden'>
         <div
-          className='h-3 rounded-full transition-all duration-700 ease-out'
+          className='h-full border-r-4 border-black transition-all duration-700 ease-out'
           style={{ width: `${pct}%`, backgroundColor: color }}
         />
       </div>
@@ -89,18 +88,19 @@ function WhoFlagBadge({
   isRisk: boolean;
 }) {
   const active = value === 1;
+  const brutalColors =
+    active && isRisk
+      ? "bg-[#FCA5A5] text-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] translate-x-[-2px] translate-y-[-2px]"
+      : active
+        ? "bg-[#FDE047] text-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] translate-x-[-2px] translate-y-[-2px]"
+        : "bg-white text-black opacity-80 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]";
+
   return (
     <div
-      className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm ${
-        active && isRisk
-          ? "bg-red-50 border border-red-200 text-red-700"
-          : active
-            ? "bg-amber-50 border border-amber-200 text-amber-700"
-            : "bg-slate-50 border border-slate-200 text-slate-500"
-      }`}
+      className={`flex items-center gap-3 px-3 py-2 border-2 border-black font-bold text-sm transition-all ${brutalColors}`}
     >
       <span
-        className={`w-2 h-2 rounded-full flex-shrink-0 ${active && isRisk ? "bg-red-500" : active ? "bg-amber-400" : "bg-slate-300"}`}
+        className={`w-4 h-4 border-2 border-black flex-shrink-0 ${active && isRisk ? "bg-red-500" : active ? "bg-yellow-400" : "bg-slate-200"}`}
       />
       {label}
     </div>
@@ -109,18 +109,16 @@ function WhoFlagBadge({
 
 function ZScoreBadge({ label, value }: { label: string; value: number }) {
   const color =
-    value < -3
-      ? "bg-red-100 text-red-700 border-red-200"
-      : value < -2
-        ? "bg-orange-100 text-orange-700 border-orange-200"
-        : "bg-green-100 text-green-700 border-green-200";
+    value < -3 ? "bg-[#FCA5A5]" : value < -2 ? "bg-[#FDE047]" : "bg-[#86EFAC]";
 
   return (
     <div
-      className={`flex justify-between items-center px-3 py-2 rounded-lg border text-sm ${color}`}
+      className={`flex justify-between items-center px-4 py-2 border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] text-sm text-black ${color}`}
     >
-      <span className='font-medium'>{label}</span>
-      <span className='font-bold tabular-nums'>{value.toFixed(2)}</span>
+      <span className='font-black uppercase tracking-wide'>{label}</span>
+      <span className='font-black tabular-nums bg-white px-2 py-0.5 border-2 border-black'>
+        {value.toFixed(2)}
+      </span>
     </div>
   );
 }
@@ -150,15 +148,14 @@ function InputField({
 }) {
   return (
     <div>
-      <label className='block text-sm font-semibold text-slate-700 mb-1'>
+      <label className='block text-sm font-black text-black uppercase tracking-wide mb-2'>
         {label}
         {unit && (
-          <span className='ml-1 text-xs font-normal text-slate-400'>
-            ({unit})
+          <span className='ml-2 text-xs font-bold text-black bg-white px-1 border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]'>
+            {unit}
           </span>
         )}
       </label>
-      {hint && <p className='text-xs text-slate-400 mb-1'>{hint}</p>}
       <input
         type={type}
         min={min}
@@ -166,10 +163,16 @@ function InputField({
         step={step}
         value={value}
         onChange={(e) => onChange(name, e.target.value)}
-        className='w-full px-3 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-800
-          focus:outline-none focus:ring-2 focus:ring-teal-400 focus:border-transparent
-          text-sm transition placeholder-slate-300'
+        className='w-full px-4 py-3 rounded-none border-4 border-black bg-white text-black font-bold
+          shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] focus:outline-none focus:translate-x-[2px] 
+          focus:translate-y-[2px] focus:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] focus:bg-[#FEF08A]
+          text-sm transition-all placeholder-slate-400'
       />
+      {hint && (
+        <p className='text-xs font-bold text-black mt-2 bg-white inline-block px-1 border-2 border-black'>
+          * {hint}
+        </p>
+      )}
     </div>
   );
 }
@@ -191,23 +194,28 @@ function SelectField({
 }) {
   return (
     <div>
-      <label className='block text-sm font-semibold text-slate-700 mb-1'>
+      <label className='block text-sm font-black text-black uppercase tracking-wide mb-2'>
         {label}
       </label>
-      {hint && <p className='text-xs text-slate-400 mb-1'>{hint}</p>}
       <select
         value={value}
         onChange={(e) => onChange(name, e.target.value)}
-        className='w-full px-3 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-800
-          focus:outline-none focus:ring-2 focus:ring-teal-400 focus:border-transparent
-          text-sm transition appearance-none cursor-pointer'
+        className='w-full px-4 py-3 rounded-none border-4 border-black bg-white text-black font-bold
+          shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] focus:outline-none focus:translate-x-[2px] 
+          focus:translate-y-[2px] focus:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] focus:bg-[#FEF08A]
+          text-sm transition-all appearance-none cursor-pointer'
       >
         {options.map((o) => (
-          <option key={o.value} value={o.value}>
+          <option key={o.value} value={o.value} className='font-bold'>
             {o.label}
           </option>
         ))}
       </select>
+      {hint && (
+        <p className='text-xs font-bold text-black mt-2 bg-white inline-block px-1 border-2 border-black'>
+          * {hint}
+        </p>
+      )}
     </div>
   );
 }
@@ -274,82 +282,82 @@ export default function PredictPage() {
   const riskConfig = {
     LOW: {
       label: "RISIKO RENDAH",
-      bg: "bg-emerald-50",
-      border: "border-emerald-300",
-      text: "text-emerald-700",
-      badge: "bg-emerald-500",
-      icon: "✓",
+      bg: "bg-[#86EFAC]",
+      border: "border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]",
+      text: "text-black",
+      badge: "bg-white border-4 border-black text-black",
+      icon: "OK",
       desc: "Pertumbuhan anak tergolong normal. Tetap pantau tumbuh kembang secara rutin.",
     },
     MEDIUM: {
       label: "RISIKO SEDANG",
-      bg: "bg-amber-50",
-      border: "border-amber-300",
-      text: "text-amber-700",
-      badge: "bg-amber-500",
-      icon: "!",
+      bg: "bg-[#FDE047]",
+      border: "border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]",
+      text: "text-black",
+      badge: "bg-white border-4 border-black text-black",
+      icon: "AWAS",
       desc: "Terdapat indikasi risiko stunting. Konsultasikan dengan tenaga kesehatan.",
     },
     HIGH: {
       label: "RISIKO TINGGI",
-      bg: "bg-red-50",
-      border: "border-red-300",
-      text: "text-red-700",
-      badge: "bg-red-500",
-      icon: "✕",
+      bg: "bg-[#FCA5A5]",
+      border: "border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]",
+      text: "text-black",
+      badge: "bg-white border-4 border-black text-black",
+      icon: "BAHAYA",
       desc: "Anak terindikasi stunting. Segera konsultasikan dengan dokter atau ahli gizi.",
     },
   };
 
   return (
-    <div className='min-h-screen bg-gradient-to-br from-slate-50 via-teal-50/30 to-slate-100'>
+    <div className='min-h-screen bg-[#6EE7B7] pb-16 font-sans'>
       {/* Header */}
-      <header className='sticky top-0 z-10 bg-white/80 backdrop-blur border-b border-slate-200/70'>
-        <div className='max-w-5xl mx-auto px-4 py-3 flex items-center gap-3'>
-          <div className='w-9 h-9 rounded-xl bg-teal-600 flex items-center justify-center text-white font-bold text-sm'>
+      <header className='sticky top-0 z-10 bg-white border-b-4 border-black'>
+        <div className='max-w-6xl mx-auto px-4 py-4 flex items-center gap-4'>
+          <div className='w-12 h-12 bg-[#FDE047] border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] flex items-center justify-center text-black font-black text-xl'>
             SP
           </div>
           <div>
-            <h1 className='text-sm font-bold text-slate-800 leading-none'>
+            <h1 className='text-xl font-black text-black uppercase tracking-tight'>
               Stunting Predict
             </h1>
-            <p className='text-xs text-slate-400 mt-0.5'>
+            <p className='text-sm font-bold text-black mt-0.5 bg-[#A7F3D0] inline-block px-2 border-2 border-black'>
               Deteksi dini risiko stunting anak
             </p>
           </div>
         </div>
       </header>
 
-      <main className='max-w-5xl mx-auto px-4 py-8 space-y-8'>
+      <main className='max-w-6xl mx-auto px-4 py-10 space-y-10'>
         {/* Hero */}
-        <div className='text-center space-y-2'>
-          <h2 className='text-2xl font-extrabold text-slate-800 tracking-tight'>
+        <div className='text-center space-y-4 bg-white border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] p-8'>
+          <h2 className='text-3xl sm:text-4xl font-black text-black uppercase tracking-tight'>
             Prediksi Status Stunting
           </h2>
-          <p className='text-slate-500 text-sm max-w-xl mx-auto'>
+          <p className='text-black font-bold text-base max-w-2xl mx-auto bg-[#FEF08A] p-2 border-2 border-black'>
             Masukkan data antropometri anak untuk mendapatkan prediksi risiko
             stunting menggunakan model Machine Learning berbasis data 13.814
             anak.
           </p>
         </div>
 
-        <div className='grid grid-cols-1 lg:grid-cols-5 gap-6'>
+        <div className='grid grid-cols-1 lg:grid-cols-5 gap-8'>
           {/* ── Form ── */}
           <div className='lg:col-span-3'>
             <form
               onSubmit={handleSubmit}
-              className='bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden'
+              className='bg-white border-4 border-black shadow-[12px_12px_0px_0px_rgba(0,0,0,1)] flex flex-col'
             >
               {/* Form Header */}
-              <div className='px-6 py-4 border-b border-slate-100 bg-slate-50/50'>
-                <h3 className='font-bold text-slate-700 text-sm uppercase tracking-wider'>
+              <div className='px-6 py-5 border-b-4 border-black bg-[#93C5FD]'>
+                <h3 className='font-black text-black text-xl uppercase tracking-widest'>
                   Data Anak
                 </h3>
               </div>
 
-              <div className='p-6 space-y-5'>
+              <div className='p-6 md:p-8 space-y-8 flex-1'>
                 {/* Row 1 */}
-                <div className='grid grid-cols-2 gap-4'>
+                <div className='grid grid-cols-1 sm:grid-cols-2 gap-6'>
                   <SelectField
                     label='Jenis Kelamin'
                     name='Sex'
@@ -374,16 +382,16 @@ export default function PredictPage() {
                 </div>
 
                 {/* Divider */}
-                <div className='flex items-center gap-3'>
-                  <div className='flex-1 h-px bg-slate-100' />
-                  <span className='text-xs text-slate-400 font-medium'>
+                <div className='flex items-center gap-4 py-2'>
+                  <div className='flex-1 border-b-4 border-black border-dashed' />
+                  <span className='text-sm text-black font-black bg-[#FCA5A5] px-3 py-1 border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]'>
                     DATA LAHIR
                   </span>
-                  <div className='flex-1 h-px bg-slate-100' />
+                  <div className='flex-1 border-b-4 border-black border-dashed' />
                 </div>
 
                 {/* Row 2 */}
-                <div className='grid grid-cols-2 gap-4'>
+                <div className='grid grid-cols-1 sm:grid-cols-2 gap-6'>
                   <InputField
                     label='Berat Lahir'
                     name='Birth_Weight'
@@ -409,16 +417,16 @@ export default function PredictPage() {
                 </div>
 
                 {/* Divider */}
-                <div className='flex items-center gap-3'>
-                  <div className='flex-1 h-px bg-slate-100' />
-                  <span className='text-xs text-slate-400 font-medium'>
+                <div className='flex items-center gap-4 py-2'>
+                  <div className='flex-1 border-b-4 border-black border-dashed' />
+                  <span className='text-sm text-black font-black bg-[#86EFAC] px-3 py-1 border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]'>
                     DATA SAAT INI
                   </span>
-                  <div className='flex-1 h-px bg-slate-100' />
+                  <div className='flex-1 border-b-4 border-black border-dashed' />
                 </div>
 
                 {/* Row 3 */}
-                <div className='grid grid-cols-2 gap-4'>
+                <div className='grid grid-cols-1 sm:grid-cols-2 gap-6'>
                   <InputField
                     label='Berat Badan'
                     name='Body_Weight'
@@ -451,7 +459,7 @@ export default function PredictPage() {
                   options={[
                     { label: "Ya — mendapat ASI eksklusif", value: "Yes" },
                     {
-                      label: "Tidak — tidak mendapat ASI eksklusif",
+                      label: "Tidak — tidak mendapat ASI",
                       value: "No",
                     },
                   ]}
@@ -461,18 +469,19 @@ export default function PredictPage() {
               </div>
 
               {/* Form Footer */}
-              <div className='px-6 pb-6 flex gap-3'>
+              <div className='p-6 border-t-4 border-black bg-white flex flex-col sm:flex-row gap-4'>
                 <button
                   type='submit'
                   disabled={loading}
-                  className='flex-1 py-3 rounded-xl bg-teal-600 hover:bg-teal-700 active:scale-[0.98]
-                    text-white font-bold text-sm transition-all shadow-sm disabled:opacity-60
-                    disabled:cursor-not-allowed flex items-center justify-center gap-2'
+                  className='flex-1 py-4 bg-[#FDE047] border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:bg-[#FACC15] 
+                    active:translate-x-[4px] active:translate-y-[4px] active:shadow-none
+                    text-black font-black text-base uppercase tracking-widest transition-all disabled:opacity-50
+                    disabled:cursor-not-allowed flex items-center justify-center gap-3'
                 >
                   {loading ? (
                     <>
                       <svg
-                        className='animate-spin w-4 h-4'
+                        className='animate-spin w-6 h-6'
                         fill='none'
                         viewBox='0 0 24 24'
                       >
@@ -490,36 +499,39 @@ export default function PredictPage() {
                           d='M4 12a8 8 0 018-8v8z'
                         />
                       </svg>
-                      Menganalisis...
+                      ANALISIS...
                     </>
                   ) : (
-                    "Prediksi Sekarang"
+                    "PREDIKSI SEKARANG"
                   )}
                 </button>
                 <button
                   type='button'
                   onClick={handleReset}
-                  className='px-4 py-3 rounded-xl border border-slate-200 text-slate-500
-                    hover:bg-slate-50 text-sm font-medium transition-all'
+                  className='px-6 py-4 bg-white border-4 border-black text-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]
+                    hover:bg-slate-100 font-black text-base uppercase tracking-widest transition-all
+                    active:translate-x-[4px] active:translate-y-[4px] active:shadow-none'
                 >
-                  Reset
+                  RESET
                 </button>
               </div>
             </form>
           </div>
 
           {/* ── Result Panel ── */}
-          <div className='lg:col-span-2 space-y-4'>
+          <div className='lg:col-span-2 space-y-6'>
             {/* Error */}
             {error && (
-              <div className='bg-red-50 border border-red-200 rounded-2xl p-4'>
-                <div className='flex items-start gap-3'>
-                  <span className='text-red-500 text-lg mt-0.5'>⚠</span>
+              <div className='bg-[#FCA5A5] border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] p-5'>
+                <div className='flex items-start gap-4'>
+                  <span className='bg-white text-black font-black text-xl px-3 py-1 border-4 border-black'>
+                    !
+                  </span>
                   <div>
-                    <p className='font-bold text-red-700 text-sm'>
-                      Gagal memproses
+                    <p className='font-black text-black text-lg uppercase'>
+                      Gagal Memproses
                     </p>
-                    <p className='text-red-600 text-xs mt-1 leading-relaxed'>
+                    <p className='text-black font-bold text-sm mt-1 bg-white p-2 border-2 border-black'>
                       {error}
                     </p>
                   </div>
@@ -529,30 +541,36 @@ export default function PredictPage() {
 
             {/* Placeholder */}
             {!result && !loading && !error && (
-              <div className='bg-white rounded-2xl border border-slate-200 border-dashed p-8 text-center space-y-3'>
-                <div className='w-14 h-14 rounded-2xl bg-slate-100 flex items-center justify-center mx-auto text-2xl'>
+              <div className='bg-white border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] p-8 text-center space-y-4 h-full flex flex-col justify-center min-h-[300px]'>
+                <div className='w-20 h-20 bg-[#93C5FD] border-4 border-black flex items-center justify-center mx-auto text-4xl shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]'>
                   🧒
                 </div>
-                <p className='text-sm text-slate-400 leading-relaxed'>
-                  Isi form di sebelah kiri dan klik{" "}
-                  <strong>Prediksi Sekarang</strong> untuk melihat hasil
-                  analisis.
+                <p className='text-base text-black font-bold border-2 border-black p-3 bg-[#FEF08A]'>
+                  Isi form di sebelah kiri dan klik <br />
+                  <span className='font-black uppercase'>
+                    Prediksi Sekarang
+                  </span>{" "}
+                  <br />
+                  untuk melihat hasil analisis.
                 </p>
               </div>
             )}
 
             {/* Loading skeleton */}
             {loading && (
-              <div className='bg-white rounded-2xl border border-slate-200 p-6 space-y-4 animate-pulse'>
-                <div className='h-5 bg-slate-100 rounded-lg w-3/4' />
-                <div className='h-12 bg-slate-100 rounded-xl' />
-                <div className='space-y-2'>
-                  <div className='h-3 bg-slate-100 rounded w-full' />
-                  <div className='h-3 bg-slate-100 rounded w-5/6' />
+              <div className='bg-white border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] p-6 space-y-6 animate-pulse min-h-[300px]'>
+                <div className='h-8 bg-slate-300 border-2 border-black w-3/4' />
+                <div className='h-20 bg-slate-200 border-4 border-black' />
+                <div className='space-y-3'>
+                  <div className='h-4 bg-slate-300 border-2 border-black w-full' />
+                  <div className='h-4 bg-slate-300 border-2 border-black w-5/6' />
                 </div>
-                <div className='grid grid-cols-2 gap-2'>
-                  {[0, 1, 2, 3].map((i) => (
-                    <div key={i} className='h-8 bg-slate-100 rounded-lg' />
+                <div className='grid grid-cols-1 gap-4'>
+                  {[0, 1, 2].map((i) => (
+                    <div
+                      key={i}
+                      className='h-12 bg-slate-200 border-4 border-black'
+                    />
                   ))}
                 </div>
               </div>
@@ -560,38 +578,40 @@ export default function PredictPage() {
 
             {/* Result */}
             {result && !loading && (
-              <>
+              <div className='space-y-6'>
                 {/* Risk Card */}
                 {(() => {
                   const cfg = riskConfig[result.risk_level];
                   return (
-                    <div
-                      className={`rounded-2xl border-2 p-5 ${cfg.bg} ${cfg.border}`}
-                    >
-                      <div className='flex items-center gap-3 mb-3'>
+                    <div className={`p-6 ${cfg.bg} ${cfg.border}`}>
+                      <div className='flex items-center gap-4 mb-4'>
                         <div
-                          className={`w-10 h-10 rounded-xl ${cfg.badge} flex items-center justify-center text-white font-black text-lg`}
+                          className={`w-14 h-14 ${cfg.badge} flex items-center justify-center text-black font-black text-sm p-1 text-center leading-tight shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]`}
                         >
                           {cfg.icon}
                         </div>
                         <div>
                           <p
-                            className={`text-xs font-bold uppercase tracking-wider ${cfg.text} opacity-70`}
+                            className={`text-sm font-black uppercase tracking-wider text-black bg-white px-2 py-0.5 border-2 border-black inline-block mb-1`}
                           >
                             Hasil Prediksi
                           </p>
-                          <p className={`font-extrabold text-base ${cfg.text}`}>
+                          <p
+                            className={`font-black text-2xl text-black uppercase`}
+                          >
                             {result.label}
                           </p>
                         </div>
+                      </div>
+                      <div className='flex items-center justify-between mt-6'>
                         <span
-                          className={`ml-auto text-xs font-bold px-2.5 py-1 rounded-full ${cfg.badge} text-white`}
+                          className={`text-sm font-black px-4 py-2 ${cfg.badge} shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]`}
                         >
                           {cfg.label}
                         </span>
                       </div>
                       <p
-                        className={`text-xs leading-relaxed ${cfg.text} opacity-80`}
+                        className={`text-sm font-bold mt-4 p-3 bg-white border-4 border-black text-black`}
                       >
                         {cfg.desc}
                       </p>
@@ -600,28 +620,30 @@ export default function PredictPage() {
                 })()}
 
                 {/* Probability */}
-                <div className='bg-white rounded-2xl border border-slate-200 p-5'>
-                  <h4 className='text-xs font-bold text-slate-500 uppercase tracking-wider mb-4'>
+                <div className='bg-white border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] p-6'>
+                  <h4 className='text-sm font-black text-black uppercase tracking-widest mb-6 border-b-4 border-black pb-2'>
                     Distribusi Probabilitas
                   </h4>
                   <ProbabilityBar
                     label='Stunting'
                     value={result.probability?.stunting ?? 0}
-                    color='#ef4444'
+                    color='#FCA5A5'
                   />
-                  <ProbabilityBar
-                    label='Tidak Stunting'
-                    value={result.probability?.tidak_stunting ?? 0}
-                    color='#10b981'
-                  />
+                  <div className='mt-6'>
+                    <ProbabilityBar
+                      label='Tidak Stunting'
+                      value={result.probability?.tidak_stunting ?? 0}
+                      color='#86EFAC'
+                    />
+                  </div>
                 </div>
 
                 {/* Z-Scores */}
-                <div className='bg-white rounded-2xl border border-slate-200 p-5'>
-                  <h4 className='text-xs font-bold text-slate-500 uppercase tracking-wider mb-3'>
+                <div className='bg-white border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] p-6'>
+                  <h4 className='text-sm font-black text-black uppercase tracking-widest mb-5 border-b-4 border-black pb-2'>
                     Z-Score WHO
                   </h4>
-                  <div className='space-y-2'>
+                  <div className='space-y-4'>
                     <ZScoreBadge
                       label='Panjang / Umur (LAZ)'
                       value={result.who_flags.length_for_age_z}
@@ -631,17 +653,18 @@ export default function PredictPage() {
                       value={result.who_flags.weight_for_age_z}
                     />
                   </div>
-                  <p className='text-xs text-slate-400 mt-2'>
-                    Z-Score &lt; −2 = berisiko · &lt; −3 = sangat berisiko
+                  <p className='text-xs font-bold text-black mt-4 bg-[#FEF08A] p-2 border-2 border-black text-center'>
+                    Z-Score &lt; −2 = berisiko <br /> Z-Score &lt; −3 = sangat
+                    berisiko
                   </p>
                 </div>
 
                 {/* WHO Flags */}
-                <div className='bg-white rounded-2xl border border-slate-200 p-5'>
-                  <h4 className='text-xs font-bold text-slate-500 uppercase tracking-wider mb-3'>
+                <div className='bg-white border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] p-6'>
+                  <h4 className='text-sm font-black text-black uppercase tracking-widest mb-5 border-b-4 border-black pb-2'>
                     Indikator WHO
                   </h4>
-                  <div className='grid grid-cols-1 gap-2'>
+                  <div className='grid grid-cols-1 gap-3'>
                     <WhoFlagBadge
                       label='Indikator Stunting WHO'
                       value={result.who_flags.stunting_who_indicator}
@@ -666,26 +689,32 @@ export default function PredictPage() {
                 </div>
 
                 {/* Footer note */}
-                <p className='text-center text-xs text-slate-400 pb-2'>
-                  Model:{" "}
-                  <code className='bg-slate-100 px-1.5 py-0.5 rounded text-slate-500'>
-                    {result.model_used}
-                  </code>{" "}
-                  · Hasil bukan pengganti diagnosis medis
-                </p>
-              </>
+                <div className='text-center p-4 bg-white border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]'>
+                  <p className='text-xs font-bold text-black'>
+                    Model:{" "}
+                    <code className='bg-[#93C5FD] px-2 py-1 border-2 border-black font-black'>
+                      {result.model_used}
+                    </code>
+                  </p>
+                  <p className='text-xs font-bold text-black mt-2 uppercase'>
+                    * Hasil bukan pengganti diagnosis medis *
+                  </p>
+                </div>
+              </div>
             )}
           </div>
         </div>
 
         {/* Info Banner */}
-        <div className='bg-teal-600 rounded-2xl p-5 flex flex-col sm:flex-row gap-4 items-start sm:items-center'>
-          <div className='w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center flex-shrink-0 text-white text-lg'>
+        <div className='bg-[#C084FC] border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] p-6 flex flex-col sm:flex-row gap-6 items-start sm:items-center'>
+          <div className='w-14 h-14 bg-white border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] flex items-center justify-center flex-shrink-0 text-black font-black text-2xl'>
             ℹ
           </div>
           <div className='flex-1'>
-            <p className='text-white font-bold text-sm'>Tentang Prediksi Ini</p>
-            <p className='text-teal-100 text-xs mt-1 leading-relaxed'>
+            <p className='text-black font-black text-lg uppercase tracking-wide'>
+              Tentang Prediksi Ini
+            </p>
+            <p className='text-black font-bold text-sm mt-2 leading-relaxed bg-white p-3 border-2 border-black'>
               Sistem ini menggunakan model Machine Learning yang dilatih dengan
               13.814 data anak. Prediksi bersifat indikatif dan tidak
               menggantikan pemeriksaan medis oleh tenaga kesehatan profesional.
