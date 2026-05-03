@@ -36,7 +36,7 @@ export function WhoFlagBadge({
   value: number;
   isRisk: boolean;
 }) {
-  const active = value === 1;
+  const active = Number(value) === 1;
   const brutalColors =
     active && isRisk
       ? "bg-[#FCA5A5] shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] translate-x-[-2px] translate-y-[-2px]"
