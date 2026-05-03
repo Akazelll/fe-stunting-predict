@@ -22,11 +22,15 @@ export function usePredict() {
     process.env.NEXT_PUBLIC_API_BASE ||
     "https://akazelll-stunting-predict.hf.space";
 
-  const handleChange = (name: keyof PredictInput, val: string) => {
+  // PERBAIKAN: Ubah parameter 'name' dari keyof PredictInput → string
+  // agar kompatibel dengan InputProps.onChange = (name: string, val: string) => void
+  // Cast internal ke keyof PredictInput agar setForm tetap type-safe
+  const handleChange = (name: string, val: string) => {
+    const key = name as keyof PredictInput;
     setForm((prev) => ({
       ...prev,
-      [name]:
-        name === "Sex" || name === "ASI_Eksklusif"
+      [key]:
+        key === "Sex" || key === "ASI_Eksklusif"
           ? val
           : val === ""
             ? ""

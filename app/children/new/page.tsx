@@ -11,7 +11,7 @@ export default function NewChildPage() {
   const router = useRouter();
   const supabase = createClient();
   const [loading, setLoading] = useState(false);
-  const [isMounted, setIsMounted] = useState(false); // Untuk mencegah hydration error
+  const [isMounted, setIsMounted] = useState(false);
 
   const [form, setForm] = useState({
     name: "",
@@ -21,7 +21,6 @@ export default function NewChildPage() {
     birth_length: "",
   });
 
-  // Pastikan komponen sudah terpasang di client sebelum render penuh
   useEffect(() => {
     setIsMounted(true);
   }, []);
@@ -33,7 +32,6 @@ export default function NewChildPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (loading) return;
-
     setLoading(true);
 
     try {
@@ -42,22 +40,38 @@ export default function NewChildPage() {
       } = await supabase.auth.getUser();
       if (!user) throw new Error("Silakan login kembali.");
 
-      const { error } = await supabase.from("children").insert([
-        {
-          user_id: user.id,
-          name: form.name,
-          birth_date: form.birth_date,
-          gender: form.gender,
-          birth_weight: form.birth_weight
-            ? parseFloat(form.birth_weight)
-            : null,
-          birth_length: form.birth_length
-            ? parseFloat(form.birth_length)
-            : null,
-        },
-      ]);
+      // Step 1: Insert anak — hanya kolom yang ada di skema
+      const { data: child, error: childError } = await supabase
+        .from("children")
+        .insert([
+          {
+            user_id: user.id,
+            name: form.name,
+            birth_date: form.birth_date,
+            gender: form.gender,
+          },
+        ])
+        .select("id")
+        .single();
 
-      if (error) throw error;
+      if (childError) throw childError;
+
+      // Step 2: Simpan berat & panjang lahir sebagai growth record pertama (age_months = 0)
+      if (form.birth_weight || form.birth_length) {
+        const { error: growthError } = await supabase
+          .from("growth_records")
+          .insert([
+            {
+              child_id: child.id,
+              weight_kg: form.birth_weight ? parseFloat(form.birth_weight) : 0,
+              height_cm: form.birth_length ? parseFloat(form.birth_length) : 0,
+              age_months: 0, // 0 = data lahir
+            },
+          ]);
+
+        if (growthError) throw growthError;
+      }
+
       router.push("/dashboard");
     } catch (err: any) {
       alert(err.message);
@@ -65,7 +79,6 @@ export default function NewChildPage() {
     }
   };
 
-  // Jika belum mounted, tampilkan loading/kosong untuk menghindari mismatch
   if (!isMounted) return null;
 
   return (
@@ -97,10 +110,7 @@ export default function NewChildPage() {
               label='Nama Lengkap Anak'
               name='name'
               value={form.name}
-              // Memastikan menangani e.target.value ATAU nilai langsung
-              onChange={(e: any) =>
-                handleUpdate("name", e.target ? e.target.value : e)
-              }
+              onChange={(_name, val) => handleUpdate("name", val)}
               required
             />
 
@@ -110,9 +120,7 @@ export default function NewChildPage() {
                 name='birth_date'
                 type='date'
                 value={form.birth_date}
-                onChange={(e: any) =>
-                  handleUpdate("birth_date", e.target ? e.target.value : e)
-                }
+                onChange={(_name, val) => handleUpdate("birth_date", val)}
                 required
               />
               <SelectField
@@ -123,7 +131,9 @@ export default function NewChildPage() {
                   { label: "Laki-laki", value: "L" },
                   { label: "Perempuan", value: "P" },
                 ]}
-                onChange={(val: any) => handleUpdate("gender", val)}
+                onChange={(_name: string, val: string) =>
+                  handleUpdate("gender", val)
+                }
               />
             </div>
 
@@ -142,9 +152,7 @@ export default function NewChildPage() {
                 type='number'
                 step='0.01'
                 value={form.birth_weight}
-                onChange={(e: any) =>
-                  handleUpdate("birth_weight", e.target ? e.target.value : e)
-                }
+                onChange={(_name, val) => handleUpdate("birth_weight", val)}
                 placeholder='Misal: 3.2'
                 required
               />
@@ -154,9 +162,7 @@ export default function NewChildPage() {
                 type='number'
                 step='0.1'
                 value={form.birth_length}
-                onChange={(e: any) =>
-                  handleUpdate("birth_length", e.target ? e.target.value : e)
-                }
+                onChange={(_name, val) => handleUpdate("birth_length", val)}
                 placeholder='Misal: 49.5'
                 required
               />

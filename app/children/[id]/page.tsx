@@ -6,8 +6,7 @@ import { createClient } from "@/lib/supabase/client";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 
-// Import Komponen & Hook Proyek
-import { InputField,SelectField } from "@/components/BrutalInputs";
+import { InputField, SelectField } from "@/components/BrutalInputs";
 import { ProbabilityBar, ZScoreBadge } from "@/components/BrutalDisplay";
 import { usePredict } from "@/hooks/usePredict";
 import { PredictResult } from "@/types/predict";
@@ -39,6 +38,8 @@ export default function ChildDetailPage() {
   const supabase = createClient();
 
   const [child, setChild] = useState<any>(null);
+  // ✅ Tambah state untuk menyimpan data lahir dari growth_records
+  const [birthRecord, setBirthRecord] = useState<any>(null);
   const [predictionsList, setPredictionsList] = useState<any[]>([]);
   const [isLoadingData, setIsLoadingData] = useState(true);
 
@@ -55,31 +56,48 @@ export default function ChildDetailPage() {
     if (id) fetchChildData();
   }, [id]);
 
+  // ✅ Sekarang bergantung pada child DAN birthRecord
   useEffect(() => {
-    if (child) {
-      const ageMonths = calculateAgeMonths(child.birth_date).toString();
-      const sexMapping = child.gender === "L" ? "Male" : "Female";
+    if (!child) return;
 
-      handleChange("Age", ageMonths);
-      handleChange("Sex", sexMapping);
-      handleChange("Birth_Weight", child.birth_weight?.toString() || "");
-      handleChange("Birth_Length", child.birth_length?.toString() || "");
-    }
-  }, [child]);
+    const ageMonths = calculateAgeMonths(child.birth_date).toString();
+    const sexMapping = child.gender === "L" ? "Male" : "Female";
 
-  // Simpan hasil ke database secara otomatis setelah prediksi sukses
+    handleChange("Age", ageMonths);
+    handleChange("Sex", sexMapping);
+
+    // ✅ Ambil dari birthRecord (growth_records age_months=0), bukan dari child
+    handleChange("Birth_Weight", birthRecord?.weight_kg?.toString() ?? "");
+    handleChange("Birth_Length", birthRecord?.height_cm?.toString() ?? "");
+  }, [child, birthRecord]); // ✅ birthRecord masuk dependency
+
   useEffect(() => {
     if (aiResult && child) savePredictionToDatabase(aiResult);
   }, [aiResult]);
 
   async function fetchChildData() {
+    setIsLoadingData(true);
+
+    // Fetch data anak
     const { data: childData } = await supabase
       .from("children")
       .select("*")
       .eq("id", id)
       .single();
+
     setChild(childData);
 
+    // ✅ Fetch data lahir (growth_records dengan age_months = 0)
+    const { data: birthData } = await supabase
+      .from("growth_records")
+      .select("weight_kg, height_cm")
+      .eq("child_id", id)
+      .eq("age_months", 0)
+      .single();
+
+    setBirthRecord(birthData ?? null);
+
+    // Fetch riwayat prediksi
     const { data: predData } = await supabase
       .from("predictions")
       .select("*")
@@ -127,6 +145,7 @@ export default function ChildDetailPage() {
           confidence_score: resultData.probability.stunting,
         },
       ]);
+
       fetchChildData();
     } catch (e) {
       console.error("Gagal simpan:", e);
@@ -182,7 +201,7 @@ export default function ChildDetailPage() {
               </div>
 
               <div className='p-6 md:p-8 space-y-8'>
-                {/* Section 1: Data Statis (Otomatis & Terkunci)[cite: 1] */}
+                {/* Section 1: Data Statis */}
                 <div className='grid grid-cols-1 sm:grid-cols-2 gap-6 opacity-70'>
                   <InputField
                     label='Jenis Kelamin'
@@ -240,7 +259,6 @@ export default function ChildDetailPage() {
                   <div className='flex-1 border-b-4 border-black border-dashed' />
                 </div>
 
-                {/* Section 2: Data Dinamis (Yang perlu diisi ortu)[cite: 1] */}
                 <div className='grid grid-cols-1 sm:grid-cols-2 gap-6'>
                   <InputField
                     label='Berat Badan Sekarang'
@@ -290,6 +308,12 @@ export default function ChildDetailPage() {
 
           {/* SIDEBAR HASIL & RIWAYAT */}
           <div className='lg:col-span-2 space-y-6'>
+            {predictError && (
+              <div className='bg-[#FCA5A5] border-4 border-black p-4 font-bold text-sm'>
+                {predictError}
+              </div>
+            )}
+
             {aiResult && (
               <div className='space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500'>
                 {(() => {

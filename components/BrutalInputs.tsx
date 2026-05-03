@@ -1,18 +1,21 @@
 // components/BrutalInputs.tsx
 import { PredictInput } from "@/types/predict";
 
+// Generic interface untuk form apapun
 interface InputProps {
   label: string;
-  name: keyof PredictInput;
+  name: string; // <-- Diubah dari keyof PredictInput ke string
   value: number | string;
-  onChange: (name: keyof PredictInput, val: string) => void;
+  onChange: (name: string, val: string) => void; // <-- Diubah ke string
   type?: string;
   min?: number;
   max?: number;
-  step?: number;
+  step?: number | string; // <-- Tambah string agar "0.01" juga valid
   unit?: string;
   hint?: string;
   readOnly?: boolean;
+  placeholder?: string; // <-- Tambah
+  required?: boolean; // <-- Tambah
 }
 
 export function InputField({
@@ -36,8 +39,9 @@ export function InputField({
       </label>
       <input
         {...props}
+        name={name}
         value={value}
-        onChange={(e) => onChange(name, e.target.value)}
+        onChange={(e) => onChange(name, e.target.value)} // tetap 2-arg
         className='w-full px-4 py-3 border-4 border-black bg-white text-black font-bold shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] focus:outline-none focus:translate-x-[2px] focus:translate-y-[2px] focus:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] focus:bg-[#FEF08A] text-sm transition-all'
       />
       {hint && (
@@ -63,8 +67,9 @@ export function SelectField({
         {label}
       </label>
       <select
+        name={name}
         value={value}
-        onChange={(e) => onChange(name, e.target.value)}
+        onChange={(e) => onChange(name, e.target.value)} // tetap 2-arg, konsisten
         className='w-full px-4 py-3 border-4 border-black bg-white text-black font-bold shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] focus:outline-none focus:bg-[#FEF08A] text-sm transition-all appearance-none cursor-pointer'
       >
         {options.map((o: any) => (
