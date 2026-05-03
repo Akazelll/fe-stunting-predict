@@ -12,6 +12,7 @@ interface InputProps {
   step?: number;
   unit?: string;
   hint?: string;
+  readOnly?: boolean;
 }
 
 export function InputField({
