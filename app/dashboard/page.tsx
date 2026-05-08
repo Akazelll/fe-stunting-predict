@@ -1,144 +1,223 @@
-import { createClient } from "@/lib/supabase/server";
-import { redirect } from "next/navigation";
+"use client";
+
+import React, { useEffect, useState } from "react";
 import Link from "next/link";
+import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { createClient } from "@/lib/supabase/client";
 
-export default async function DashboardPage() {
-  // Ingat: di Next.js 15+, createClient di server wajib di-await
-  const supabase = await createClient();
+// Update tipe data untuk menampung relasi tabel predictions
+type Prediction = {
+  result: "normal" | "risk" | "stunted";
+  created_at: string;
+};
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) {
-    redirect("/auth/login");
-  }
+type Child = {
+  id: string;
+  name: string;
+  gender: "L" | "P";
+  birth_date: string;
+  predictions: Prediction[]; // Array of predictions dari join Supabase
+};
 
-  // Fetch Data Anak & Prediksi Terakhir
-  const { data: children, error } = await supabase
-    .from("children")
-    .select(
-      `
-      id,
-      name,
-      birth_date,
-      gender,
-      predictions ( result, created_at )
-    `,
-    )
-    .eq("user_id", user.id)
-    .order("created_at", { ascending: false });
+export default function DashboardPage() {
+  const [childrenData, setChildrenData] = useState<Child[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const childrenWithLatestPrediction =
-    children?.map((child) => {
-      const sortedPredictions = child.predictions?.sort(
-        (a, b) =>
-          new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
-      );
-      const latestPrediction = sortedPredictions?.[0]?.result || "Belum diuji";
-      return { ...child, latestPrediction };
-    }) || [];
+  const supabase = createClient();
+
+  useEffect(() => {
+    const fetchChildren = async () => {
+      try {
+        setIsLoading(true);
+        // Query Join: Mengambil data anak beserta history prediksi mereka
+        const { data, error: fetchError } = await supabase
+          .from("children")
+          .select(
+            `
+            id, 
+            name, 
+            gender, 
+            birth_date,
+            predictions (
+              result,
+              created_at
+            )
+          `,
+          )
+          .order("created_at", { ascending: false });
+
+        if (fetchError) throw fetchError;
+
+        setChildrenData((data as Child[]) || []);
+      } catch (err: any) {
+        setError(err.message || "Gagal mengambil data anak.");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchChildren();
+  }, [supabase]);
+
+  // Fungsi helper untuk menghitung umur dalam bulan
+  const calculateAgeInMonths = (birthDateString: string) => {
+    const birthDate = new Date(birthDateString);
+    const today = new Date();
+    const yearsDiff = today.getFullYear() - birthDate.getFullYear();
+    const monthsDiff = today.getMonth() - birthDate.getMonth();
+    return yearsDiff * 12 + monthsDiff;
+  };
+
+  // Fungsi helper untuk mendapatkan status prediksi terakhir
+  const getLatestStatus = (predictions?: Prediction[]) => {
+    if (!predictions || predictions.length === 0) return null;
+    // Urutkan berdasarkan tanggal terbaru
+    const sorted = [...predictions].sort(
+      (a, b) =>
+        new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+    );
+    return sorted[0].result;
+  };
+
+  // Konfigurasi visual UI untuk masing-masing status
+  const getStatusUI = (status: "normal" | "risk" | "stunted" | null) => {
+    switch (status) {
+      case "normal":
+        return { label: "Normal", color: "bg-green-400 text-black" };
+      case "risk":
+        return { label: "Beresiko", color: "bg-yellow-400 text-black" };
+      case "stunted":
+        return { label: "Stunting", color: "bg-red-500 text-white" };
+      default:
+        return { label: "Belum Dicek", color: "bg-gray-200 text-gray-500" };
+    }
+  };
 
   return (
-    <div className='min-h-screen bg-amber-50 p-4 sm:p-6 lg:p-10 font-sans'>
-      <div className='max-w-6xl mx-auto space-y-8'>
-        {/* Header Section */}
-        <div className='flex flex-col md:flex-row md:justify-between md:items-end border-b-8 border-black pb-6 gap-4'>
+    <AppLayout>
+      <div className='space-y-8'>
+        {/* Header Dashboard */}
+        <div className='flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-yellow-300 p-6 border-4 border-black shadow-[8px_8px_0_0_#000]'>
           <div>
-            <h1 className='text-4xl sm:text-5xl font-black uppercase tracking-tight text-black bg-yellow-400 inline-block px-4 py-2 border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transform -rotate-1 hover:rotate-0 transition-transform'>
-              Dashboard
+            <h1 className='text-3xl md:text-4xl font-black uppercase'>
+              Data Anak
             </h1>
-            <p className='text-lg sm:text-xl font-bold mt-4 bg-white inline-block px-3 py-1 border-2 border-black'>
-              Keluarga Sehat, Masa Depan Kuat.
+            <p className='font-bold text-black mt-1'>
+              Kelola dan pantau riwayat prediksi stunting anak.
             </p>
           </div>
-          <Link href='/children/new' className='mt-2 md:mt-0'>
-            <Button className='w-full md:w-auto h-14 px-8 text-xl border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-y-1 hover:translate-x-1 hover:shadow-none transition-all bg-blue-500 text-white uppercase font-black rounded-none'>
-              + Tambah Anak
-            </Button>
-          </Link>
+          <Button asChild variant='primary' className='w-full sm:w-auto'>
+            <Link href='/children/new'>+ Tambah Anak</Link>
+          </Button>
         </div>
 
-        {/* Empty State */}
-        {childrenWithLatestPrediction.length === 0 ? (
-          <Card className='border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] bg-white p-6 sm:p-10 text-center transform transition-all hover:-translate-y-1 hover:shadow-[12px_12px_0px_0px_rgba(0,0,0,1)] rounded-none'>
-            <CardContent className='pt-6'>
-              <div className='text-7xl sm:text-8xl mb-6 animate-bounce'>👶</div>
-              <h2 className='text-3xl sm:text-4xl font-black mb-3 uppercase'>
-                Belum Ada Data
-              </h2>
-              <p className='mb-8 font-bold text-lg sm:text-xl text-gray-700 max-w-md mx-auto'>
-                Langkah pertama mencegah stunting dimulai dari sini. Yuk,
-                masukkan data si kecil!
-              </p>
-              <Link href='/children/new'>
-                <Button className='h-16 px-10 text-2xl border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-y-1 hover:translate-x-1 hover:shadow-none active:translate-y-2 active:translate-x-2 transition-all bg-green-400 text-black uppercase font-black rounded-none'>
-                  Mulai Sekarang
-                </Button>
-              </Link>
-            </CardContent>
-          </Card>
-        ) : (
-          /* Grid Data Anak */
-          <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8'>
-            {childrenWithLatestPrediction.map((child) => (
-              <Card
-                key={child.id}
-                className='border-4 border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] bg-white hover:-translate-y-2 transition-transform duration-200 rounded-none overflow-hidden'
-              >
-                <CardHeader className='border-b-4 border-black bg-yellow-400 p-5'>
-                  <CardTitle className='text-2xl sm:text-3xl font-black uppercase flex justify-between items-center tracking-tight'>
-                    <span className='truncate pr-2'>{child.name}</span>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="p-5 space-y-5 bg-[url('/bg-pattern.svg')]">
-                  {/* Status Label */}
-                  <div className='flex justify-between items-center bg-white border-4 border-black p-3 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]'>
-                    <span className='font-black uppercase text-sm'>Status</span>
-                    <span
-                      className={`text-sm px-3 py-1 border-2 border-black font-black uppercase
-                      ${
-                        child.latestPrediction === "normal"
-                          ? "bg-green-400"
-                          : child.latestPrediction === "risk"
-                            ? "bg-yellow-400"
-                            : child.latestPrediction === "stunted"
-                              ? "bg-red-500 text-white"
-                              : "bg-gray-200"
-                      }`}
-                    >
-                      {child.latestPrediction}
-                    </span>
+        {/* Error State */}
+        {error && (
+          <div className='bg-red-200 border-4 border-black p-4 mt-4 shadow-[4px_4px_0_0_#000]'>
+            <p className='font-bold text-red-800 uppercase flex items-center gap-2'>
+              <span className='text-xl'>⚠️</span> Error: {error}
+            </p>
+          </div>
+        )}
+
+        {/* Loading State */}
+        {isLoading && (
+          <div className='flex justify-center py-12'>
+            <div className='animate-pulse bg-white border-4 border-black p-6 shadow-[8px_8px_0_0_#000]'>
+              <span className='font-black uppercase text-xl'>
+                Memuat Data...
+              </span>
+            </div>
+          </div>
+        )}
+
+        {/* List Data Anak */}
+        {!isLoading && childrenData.length > 0 && (
+          <div className='grid grid-cols-1 md:grid-cols-2 gap-6'>
+            {childrenData.map((child) => {
+              const latestStatus = getLatestStatus(child.predictions);
+              const statusUI = getStatusUI(latestStatus);
+
+              return (
+                <div
+                  key={child.id}
+                  className='group flex flex-col justify-between bg-white border-4 border-black p-6 shadow-[8px_8px_0_0_#000] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[4px_4px_0_0_#000] transition-all'
+                >
+                  <div>
+                    {/* Header Card: Nama & Gender */}
+                    <div className='flex justify-between items-start mb-4'>
+                      <h3
+                        className='text-2xl font-black uppercase line-clamp-1'
+                        title={child.name}
+                      >
+                        {child.name}
+                      </h3>
+                      <Badge
+                        variant={child.gender === "L" ? "default" : "warning"}
+                      >
+                        {child.gender === "L" ? "Laki-laki" : "Perempuan"}
+                      </Badge>
+                    </div>
+
+                    {/* Informasi Metrik (Usia & Status) */}
+                    <div className='flex gap-6 mb-6 border-l-4 border-black pl-3 py-1'>
+                      <div>
+                        <p className='text-xs font-bold text-gray-500 uppercase'>
+                          Usia
+                        </p>
+                        <p className='font-black text-lg'>
+                          {calculateAgeInMonths(child.birth_date)} Bulan
+                        </p>
+                      </div>
+
+                      {/* Divider Visual */}
+                      <div className='w-1 bg-black/10'></div>
+
+                      <div>
+                        <p className='text-xs font-bold text-gray-500 uppercase'>
+                          Status Terakhir
+                        </p>
+                        <div
+                          className={`mt-1 inline-flex items-center rounded-none border-2 border-black px-2 py-0.5 text-xs font-black uppercase shadow-[2px_2px_0_0_#000] ${statusUI.color}`}
+                        >
+                          {statusUI.label}
+                        </div>
+                      </div>
+                    </div>
                   </div>
 
-                  <div className='space-y-2 bg-white p-4 border-4 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] font-bold'>
-                    <div className='flex justify-between border-b-2 border-black border-dashed pb-2'>
-                      <span>Gender</span>
-                      <span className='uppercase'>
-                        {child.gender === "L" ? "Laki-laki 👦" : "Perempuan 👧"}
-                      </span>
-                    </div>
-                    <div className='flex justify-between pt-1'>
-                      <span>Tgl Lahir</span>
-                      <span>
-                        {new Date(child.birth_date).toLocaleDateString("id-ID")}
-                      </span>
-                    </div>
-                  </div>
-
-                  <Link href={`/children/${child.id}`} className='block mt-4'>
-                    <Button className='w-full h-14 text-xl border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-y-1 hover:translate-x-1 hover:shadow-none transition-all bg-black text-white uppercase font-black rounded-none'>
-                      Pantau Anak &rarr;
+                  {/* Tombol Aksi */}
+                  <div className='flex gap-3 mt-4 pt-4 border-t-4 border-black'>
+                    <Button asChild variant='primary' className='w-full'>
+                      <Link href={`/children/${child.id}`}>Detail Profil</Link>
                     </Button>
-                  </Link>
-                </CardContent>
-              </Card>
-            ))}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Empty State */}
+        {!isLoading && !error && childrenData.length === 0 && (
+          <div className='bg-white border-4 border-black p-10 text-center shadow-[8px_8px_0_0_#000]'>
+            <div className='text-6xl mb-4'>👶</div>
+            <h3 className='text-2xl font-black uppercase mb-2'>
+              Belum Ada Data Anak
+            </h3>
+            <p className='font-bold text-gray-600 mb-6 max-w-md mx-auto'>
+              Kamu belum menambahkan profil anak. Tambahkan sekarang untuk mulai
+              melakukan prediksi stunting.
+            </p>
+            <Button asChild variant='primary'>
+              <Link href='/children/new'>Tambah Data Pertama</Link>
+            </Button>
           </div>
         )}
       </div>
-    </div>
+    </AppLayout>
   );
 }
-    
