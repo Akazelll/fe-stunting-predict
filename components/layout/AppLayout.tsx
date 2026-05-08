@@ -2,11 +2,14 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { createClient } from "@/lib/supabase/client";
 
 export const AppLayout = ({ children }: { children: React.ReactNode }) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const pathname = usePathname();
+  const router = useRouter();
+  const supabase = createClient();
 
   // Tutup sidebar otomatis setiap kali pindah halaman
   useEffect(() => {
@@ -22,11 +25,21 @@ export const AppLayout = ({ children }: { children: React.ReactNode }) => {
     }
   }, [isSidebarOpen]);
 
+  // Fungsi Logout
+  const handleLogout = async () => {
+    try {
+      await supabase.auth.signOut();
+      router.push("/auth/login");
+    } catch (error) {
+      console.error("Gagal logout:", error);
+    }
+  };
+
   // Daftar Menu Navigasi
   const navLinks = [
     { name: "Dashboard", href: "/dashboard", icon: "📊" },
-    { name: "Edukasi Gizi", href: "/education", icon: "📚" },
     { name: "Data Anak", href: "/child", icon: "👶" },
+    { name: "Edukasi Gizi", href: "/education", icon: "📚" },
   ];
 
   return (
@@ -127,7 +140,10 @@ export const AppLayout = ({ children }: { children: React.ReactNode }) => {
 
         {/* Footer Sidebar (Logout) */}
         <div className='p-4 border-t-4 border-black bg-white'>
-          <button className='w-full flex items-center justify-center gap-2 px-4 py-3 border-2 border-black bg-gray-200 hover:bg-red-400 hover:text-white font-black uppercase text-sm transition-all shadow-[2px_2px_0_0_#000] active:shadow-none active:translate-x-[2px] active:translate-y-[2px]'>
+          <button
+            onClick={handleLogout}
+            className='w-full flex items-center justify-center gap-2 px-4 py-3 border-2 border-black bg-gray-200 hover:bg-red-400 hover:text-white font-black uppercase text-sm transition-all shadow-[2px_2px_0_0_#000] active:shadow-none active:translate-x-[2px] active:translate-y-[2px]'
+          >
             <span>🚪</span> Keluar Akun
           </button>
         </div>

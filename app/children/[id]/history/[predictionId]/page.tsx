@@ -41,9 +41,6 @@ export default function PredictionHistoryDetailPage() {
   const predictionId = params.predictionId as string;
   const supabase = createClient();
 
-  // ==========================================
-  // LOGIC & STATE: 100% TIDAK DIUBAH
-  // ==========================================
   const [prediction, setPrediction] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -60,11 +57,7 @@ export default function PredictionHistoryDetailPage() {
     fetchDetail();
   }, [predictionId, supabase]);
 
-  // ==========================================
-  // RENDER UI: NEOBRUTALISM REFACTOR
-  // ==========================================
 
-  // Loading State
   if (isLoading) {
     return (
       <AppLayout>

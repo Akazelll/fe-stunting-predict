@@ -76,7 +76,7 @@ export default function NewChildPage() {
         if (growthError) throw growthError;
       }
 
-      router.push("/dashboard");
+      router.push("/child");
     } catch (err: any) {
       alert(err.message);
       setLoading(false);
@@ -91,7 +91,7 @@ export default function NewChildPage() {
         {/* Tombol Kembali */}
         <div>
           <Button asChild variant='secondary'>
-            <Link href='/dashboard'>&larr; Batal & Kembali</Link>
+            <Link href='/child'>&larr; Batal & Kembali</Link>
           </Button>
         </div>
 
