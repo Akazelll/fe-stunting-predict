@@ -133,8 +133,8 @@ export default function LoginPage() {
               </p>
               <Link href='/auth/register' className='block'>
                 <Button
-                  variant='outline'
-                  className='w-full h-12 lg:h-14 text-lg lg:text-xl border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-y-1 hover:translate-x-1 hover:shadow-none transition-all bg-green-400 hover:bg-green-500 text-black uppercase font-black rounded-none'
+                  variant='secondary' // ✅ GANTI MENJADI SECONDARY
+                  className='w-full h-12 lg:h-14 text-lg lg:text-xl border-4 border-black...'
                 >
                   Buat Akun Gratis
                 </Button>

@@ -141,8 +141,8 @@ export default function RegisterPage() {
               </p>
               <Link href='/auth/login' className='block'>
                 <Button
-                  variant='outline'
-                  className='w-full h-12 lg:h-14 text-lg lg:text-xl border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-y-1 hover:translate-x-1 hover:shadow-none transition-all bg-white hover:bg-gray-100 text-black uppercase font-black rounded-none'
+                  variant='secondary' 
+                  className='w-full h-12 lg:h-14 text-lg lg:text-xl border-4 border-black...'
                 >
                   Login Sekarang
                 </Button>
