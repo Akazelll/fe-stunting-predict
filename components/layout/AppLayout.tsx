@@ -26,7 +26,7 @@ export const AppLayout = ({ children }: { children: React.ReactNode }) => {
   const navLinks = [
     { name: "Dashboard", href: "/dashboard", icon: "📊" },
     { name: "Edukasi Gizi", href: "/education", icon: "📚" },
-    { name: "Tambah Anak", href: "/children/new", icon: "👶" },
+    { name: "Data Anak", href: "/child", icon: "👶" },
   ];
 
   return (
