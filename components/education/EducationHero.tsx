@@ -3,22 +3,21 @@ import { BookHeart } from "lucide-react";
 
 export function EducationHero() {
   return (
-    <div className='bg-pink-200 p-8 md:p-12 border-4 border-black shadow-[8px_8px_0_0_#000] rounded-2xl flex flex-col md:flex-row items-center justify-between gap-6 relative overflow-hidden'>
+    <div className='border-[3px] border-black bg-[#8ec5ff] shadow-[10px_10px_0_0_#000] p-8 md:p-12 flex flex-col md:flex-row items-center justify-between gap-6 relative overflow-hidden'>
       <div className='relative z-10 space-y-4 max-w-2xl'>
-        <div className='inline-flex items-center gap-2 px-4 py-2 bg-white border-2 border-black rounded-full shadow-[2px_2px_0_0_#000] text-xs font-black uppercase'>
-          <BookHeart className='w-4 h-4 text-pink-500' />
+        <div className='inline-flex items-center gap-2 px-4 py-2 bg-white border-[3px] border-black font-black uppercase text-xs shadow-[4px_4px_0_0_#000]'>
+          <BookHeart className='w-4 h-4' />
           <span>Smart Parenting Center</span>
         </div>
-        <h1 className='text-4xl md:text-5xl font-black uppercase tracking-tight'>
-          Edukasi Tumbuh <br className='hidden md:block' />
-          Kembang Anak
+        <h1 className='text-4xl md:text-5xl font-black uppercase tracking-tight text-black'>
+          Edukasi Tumbuh Kembang Anak
         </h1>
-        <p className='font-bold text-gray-800 text-sm md:text-lg'>
+        <p className='font-bold text-black text-sm md:text-lg opacity-90'>
           Pelajari nutrisi yang tepat, tips kesehatan, dan panduan parenting
-          cerdas untuk mencegah stunting dan memaksimalkan potensi anak Anda.
+          cerdas untuk mencegah stunting.
         </p>
       </div>
-      <BookHeart className='w-48 h-48 text-pink-300 absolute -right-10 -bottom-10 opacity-60 transform rotate-12' />
+      <BookHeart className='w-48 h-48 text-black/20 absolute -right-10 -bottom-10' />
     </div>
   );
 }

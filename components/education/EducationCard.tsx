@@ -2,12 +2,11 @@ import React, { useState } from "react";
 import { Apple, Users, Stethoscope, ArrowRight } from "lucide-react";
 import { EducationContent } from "@/types/education";
 import { EducationDetailModal } from "./EducationDetailModal";
-import { Button } from "@/components/ui/button";
 
 const categoryStyles = {
-  nutrition: { color: "bg-green-300", icon: Apple, label: "Nutrisi" },
-  parenting: { color: "bg-pink-300", icon: Users, label: "Parenting" },
-  health: { color: "bg-blue-300", icon: Stethoscope, label: "Kesehatan" },
+  nutrition: { color: "bg-[#8df0a8]", icon: Apple, label: "Nutrisi" },
+  parenting: { color: "bg-[#ffe01b]", icon: Users, label: "Parenting" },
+  health: { color: "bg-[#8ec5ff]", icon: Stethoscope, label: "Kesehatan" },
 };
 
 export function EducationCard({ article }: { article: EducationContent }) {
@@ -17,39 +16,33 @@ export function EducationCard({ article }: { article: EducationContent }) {
 
   return (
     <>
-      <div className='bg-white border-4 border-black rounded-2xl shadow-[4px_4px_0_0_#000] flex flex-col justify-between p-5 hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-[2px_2px_0_0_#000] transition-all group'>
+      <div className='border-[3px] border-black bg-white shadow-[6px_6px_0_0_#000] p-5 flex flex-col justify-between hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[4px_4px_0_0_#000] transition-all'>
         <div>
           <div className='flex justify-between items-start mb-4'>
             <div
-              className={`px-3 py-1 border-2 border-black rounded-lg text-xs font-black uppercase flex items-center gap-1 shadow-[2px_2px_0_0_#000] ${style.color}`}
+              className={`px-3 py-1 border-[3px] border-black font-black uppercase text-[10px] flex items-center gap-1 shadow-[4px_4px_0_0_#000] ${style.color}`}
             >
               <Icon className='w-3 h-3' /> {style.label}
             </div>
-            {article.condition !== "normal" && (
-              <div className='px-2 py-1 bg-red-400 text-white border-2 border-black rounded-lg text-[10px] font-black uppercase shadow-[2px_2px_0_0_#000]'>
-                Penting
-              </div>
-            )}
           </div>
-          <h3 className='text-xl font-black uppercase tracking-tight mb-2 line-clamp-2 leading-tight group-hover:text-blue-600 transition-colors'>
+          <h3 className='text-lg font-black uppercase tracking-tight mb-2 leading-tight'>
             {article.title}
           </h3>
-          <p className='text-sm font-semibold text-gray-600 line-clamp-3 mb-4'>
-            {article.content.substring(0, 120)}...
+          <p className='text-sm font-bold text-gray-700 line-clamp-3 mb-4'>
+            {article.content.substring(0, 100)}...
           </p>
         </div>
 
-        <div className='pt-4 border-t-2 border-black border-dashed flex items-center justify-between mt-auto'>
-          <p className='text-xs font-bold text-gray-500 uppercase'>
+        <div className='pt-4 border-t-[3px] border-black flex items-center justify-between mt-auto'>
+          <p className='text-[10px] font-black uppercase'>
             Usia: {article.age_group} thn
           </p>
-          {/* Perbaikan: Dihapus size="sm" dan ditambahkan padding manual px-3 py-1.5 */}
-          <Button
+          <button
             onClick={() => setIsOpen(true)}
-            className='bg-black text-white hover:bg-gray-800 rounded-xl font-bold text-xs flex items-center gap-1 px-3 py-1.5 h-auto'
+            className='border-[3px] border-black bg-[#ffe01b] text-black font-black uppercase px-4 py-2 shadow-[4px_4px_0_0_#000] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[2px_2px_0_0_#000] active:shadow-none text-xs flex items-center gap-1'
           >
             Baca <ArrowRight className='w-3 h-3' />
-          </Button>
+          </button>
         </div>
       </div>
 

@@ -14,29 +14,25 @@ export function RecommendationSection({
 }: Props) {
   if (recommendations.length === 0) return null;
 
-  const getHeaderStyle = () => {
-    if (userCondition === "stunted")
-      return "bg-red-200 border-red-800 text-red-900";
-    if (userCondition === "risk")
-      return "bg-yellow-200 border-yellow-800 text-yellow-900";
-    return "bg-green-200 border-green-800 text-green-900";
-  };
+  const bgStyle =
+    userCondition === "stunted"
+      ? "bg-[#ff5a66]"
+      : userCondition === "risk"
+        ? "bg-[#ffe01b]"
+        : "bg-[#8df0a8]";
 
   return (
     <div
-      className={`border-4 border-black rounded-2xl shadow-[8px_8px_0_0_#000] p-6 mb-10 ${getHeaderStyle()}`}
+      className={`border-[3px] border-black shadow-[8px_8px_0_0_#000] p-6 mb-10 ${bgStyle}`}
     >
-      <div className='flex items-center gap-3 mb-6 border-b-4 border-black/20 pb-4'>
-        <div className='p-2 bg-white border-2 border-black rounded-xl shadow-[2px_2px_0_0_#000]'>
+      <div className='flex items-center gap-3 mb-6 border-b-[3px] border-black pb-4'>
+        <div className='p-2 bg-white border-[3px] border-black shadow-[4px_4px_0_0_#000]'>
           <BrainCircuit className='w-6 h-6 text-black' />
         </div>
         <div>
-          <h2 className='text-xl font-black uppercase'>
-            Rekomendasi Pintar Untuk Anda
-          </h2>
-          <p className='text-sm font-bold opacity-80'>
-            Disesuaikan secara otomatis berdasarkan riwayat pemeriksaan terakhir
-            anak Anda.
+          <h2 className='text-xl font-black uppercase'>Rekomendasi Pintar</h2>
+          <p className='text-xs font-bold opacity-80'>
+            Disesuaikan berdasarkan kondisi Anda.
           </p>
         </div>
       </div>
