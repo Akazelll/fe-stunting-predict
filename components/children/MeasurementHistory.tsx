@@ -2,6 +2,13 @@
 import React from "react";
 import Link from "next/link";
 
+// Helper untuk mengubah text dari database ke UI Bahasa Indonesia
+const formatStatus = (status: string) => {
+  if (status === "stunted") return "Stunting";
+  if (status === "risk") return "Berisiko";
+  return "Normal";
+};
+
 export function MeasurementHistory({
   predictionsList,
   childId,
@@ -36,9 +43,16 @@ export function MeasurementHistory({
                   })}
                 </span>
                 <span
-                  className={`text-[10px] font-black uppercase px-2 py-0.5 border-2 border-black shadow-[2px_2px_0_0_#000] ${p.result === "stunted" ? "bg-red-400 text-white" : p.result === "risk" ? "bg-yellow-400 text-black" : "bg-green-400 text-black"}`}
+                  className={`text-[10px] font-black uppercase px-2 py-0.5 border-2 border-black shadow-[2px_2px_0_0_#000] ${
+                    p.result === "stunted"
+                      ? "bg-red-400 text-white"
+                      : p.result === "risk"
+                        ? "bg-yellow-400 text-black"
+                        : "bg-green-400 text-black"
+                  }`}
                 >
-                  {p.result}
+                  {/* Panggil helper formatter di sini */}
+                  {formatStatus(p.result)}
                 </span>
               </div>
               <p className='text-xs font-bold text-gray-600 uppercase border-l-2 border-black pl-2'>
