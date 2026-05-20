@@ -10,22 +10,30 @@ import { Child } from "@/lib/dashboard-utils";
 import { DashboardHero } from "@/components/dashboard/DashboardHero";
 import { DashboardStats } from "@/components/dashboard/DashboardStats";
 import { ChildMonitoringList } from "@/components/dashboard/ChildMonitoringList";
-import { GrowthChartPlaceholder } from "@/components/dashboard/GrowthChartPlaceholder";
+// PERUBAHAN: Import GrowthChart yang asli, bukan Placeholder
+import { GrowthChart } from "@/components/dashboard/GrowthChart";
 import { RecentActivity } from "@/components/dashboard/RecentActivity";
 import { EducationWidget } from "@/components/dashboard/EducationWidget";
 
 export default function DashboardPage() {
   const [childrenData, setChildrenData] = useState<Child[]>([]);
+
+  // PERUBAHAN: State tambahan untuk menyimpan data Grafik
+  const [growthData, setGrowthData] = useState<any[]>([]);
+  const [selectedChildName, setSelectedChildName] = useState<string>("");
+
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const supabase = createClient();
 
   useEffect(() => {
-    const fetchChildren = async () => {
+    const fetchDashboardData = async () => {
       try {
         setIsLoading(true);
-        const { data, error: fetchError } = await supabase
+
+        // 1. Ambil Data Anak
+        const { data: childrenRes, error: fetchError } = await supabase
           .from("children")
           .select(
             "id, name, gender, birth_date, predictions (result, created_at)",
@@ -33,15 +41,33 @@ export default function DashboardPage() {
           .order("created_at", { ascending: false });
 
         if (fetchError) throw fetchError;
-        setChildrenData((data as Child[]) || []);
+
+        const children = (childrenRes as Child[]) || [];
+        setChildrenData(children);
+
+        // 2. Jika ada anak, ambil Data Pertumbuhan anak pertama untuk ditampilkan di grafik
+        if (children.length > 0) {
+          const firstChild = children[0];
+          setSelectedChildName(firstChild.name);
+
+          const { data: records, error: recordError } = await supabase
+            .from("growth_records")
+            .select("age_months, height_cm, weight_kg")
+            .eq("child_id", firstChild.id)
+            .order("age_months", { ascending: true }); // Urutkan dari bulan terkecil ke terbesar
+
+          if (!recordError && records) {
+            setGrowthData(records);
+          }
+        }
       } catch (err: any) {
-        setError(err.message || "Gagal mengambil data anak.");
+        setError(err.message || "Gagal mengambil data dashboard.");
       } finally {
         setIsLoading(false);
       }
     };
 
-    fetchChildren();
+    fetchDashboardData();
   }, [supabase]);
 
   return (
@@ -75,7 +101,9 @@ export default function DashboardPage() {
               {/* Kolom Kiri */}
               <div className='lg:col-span-2 space-y-8'>
                 <ChildMonitoringList childrenData={childrenData} />
-                <GrowthChartPlaceholder />
+
+                {/* PERUBAHAN: Panggil komponen grafik dengan mengirimkan props data */}
+                <GrowthChart data={growthData} childName={selectedChildName} />
               </div>
 
               {/* Kolom Kanan (Widgets) */}

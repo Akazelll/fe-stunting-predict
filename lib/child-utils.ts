@@ -1,19 +1,19 @@
 // lib/child-utils.ts
 
 export const riskConfig = {
-  LOW: {
+  Rendah: {
     label: "RISIKO RENDAH",
     bg: "bg-green-400",
     icon: "✅",
     desc: "Pertumbuhan anak normal. Tetap pantau tumbuh kembang secara rutin.",
   },
-  MEDIUM: {
+  Sedang: {
     label: "RISIKO SEDANG",
     bg: "bg-yellow-400",
     icon: "⚠️",
     desc: "Terdapat indikasi risiko stunting. Konsultasikan dengan tenaga kesehatan.",
   },
-  HIGH: {
+  Tinggi: {
     label: "RISIKO TINGGI",
     bg: "bg-red-500 text-white",
     icon: "🚨",

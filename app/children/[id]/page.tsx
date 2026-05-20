@@ -81,10 +81,12 @@ export default function ChildDetailPage() {
   async function savePredictionToDatabase(resultData: PredictResult) {
     try {
       const ageMonths = calculateAgeMonths(child.birth_date);
+
+      // ✅ PERBAIKAN: Menyesuaikan dengan format API ('Stunting' dan 'Rendah')
       const dbStatus =
-        resultData.prediction === 1
+        resultData.prediction === "Stunting"
           ? "stunted"
-          : resultData.risk_level === "LOW"
+          : resultData.risk_level === "Rendah"
             ? "normal"
             : "risk";
 
@@ -101,7 +103,8 @@ export default function ChildDetailPage() {
           child_id: id,
           input_data: { ...form, ...resultData },
           result: dbStatus,
-          confidence_score: resultData.probability.stunting,
+          // Sudah menggunakan properti yang benar
+          confidence_score: resultData.stunting_probability ?? 0,
         },
       ]);
 

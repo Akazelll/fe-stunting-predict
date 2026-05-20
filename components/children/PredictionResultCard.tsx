@@ -21,8 +21,11 @@ export function PredictionResultCard({
 
       {aiResult &&
         (() => {
+          // Fallback ke "Rendah" jika key tidak ada, mencegah undefined error sebelumnya
           const cfg =
-            riskConfig[aiResult.risk_level as keyof typeof riskConfig];
+            riskConfig[aiResult.risk_level as keyof typeof riskConfig] ||
+            riskConfig.Rendah;
+
           return (
             <div className='space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500'>
               <div
@@ -48,42 +51,50 @@ export function PredictionResultCard({
 
               <div className='bg-white border-4 border-black shadow-[8px_8px_0_0_#000] p-6 space-y-6'>
                 <h4 className='font-black uppercase tracking-widest border-b-4 border-black pb-2'>
-                  Detail Skor WHO
+                  Detail Skor
                 </h4>
                 <div className='space-y-2'>
                   <div className='flex justify-between text-xs font-black uppercase'>
                     <span>Probabilitas Stunting</span>
                     <span>
-                      {(aiResult.probability.stunting * 100).toFixed(1)}%
+                      {/* PERBAIKAN DI SINI */}
+                      {((aiResult.stunting_probability ?? 0) * 100).toFixed(1)}%
                     </span>
                   </div>
                   <div className='h-6 w-full bg-gray-200 border-2 border-black overflow-hidden relative'>
                     <div
                       className='h-full bg-red-400 border-r-2 border-black transition-all duration-1000'
                       style={{
-                        width: `${aiResult.probability.stunting * 100}%`,
+                        /* PERBAIKAN DI SINI */
+                        width: `${(aiResult.stunting_probability ?? 0) * 100}%`,
                       }}
                     />
                   </div>
                 </div>
-                <div className='space-y-3 pt-4'>
-                  <div className='flex justify-between items-center border-b-2 border-black border-dashed pb-2'>
-                    <span className='text-xs font-bold uppercase'>
-                      Z-Score (TB/U)
-                    </span>
-                    <span className='font-black bg-yellow-300 px-2 py-0.5 border-2 border-black shadow-[2px_2px_0_0_#000]'>
-                      {aiResult.who_flags.length_for_age_z.toFixed(2)}
-                    </span>
+
+                {/* Asumsi: who_flags di pass dari props yang sama, pastikan untuk memberi fallback (?) jika tidak ada */}
+                {aiResult.who_flags && (
+                  <div className='space-y-3 pt-4'>
+                    <div className='flex justify-between items-center border-b-2 border-black border-dashed pb-2'>
+                      <span className='text-xs font-bold uppercase'>
+                        Z-Score (TB/U)
+                      </span>
+                      <span className='font-black bg-yellow-300 px-2 py-0.5 border-2 border-black shadow-[2px_2px_0_0_#000]'>
+                        {aiResult.who_flags?.length_for_age_z?.toFixed(2) ??
+                          "N/A"}
+                      </span>
+                    </div>
+                    <div className='flex justify-between items-center border-b-2 border-black border-dashed pb-2'>
+                      <span className='text-xs font-bold uppercase'>
+                        Z-Score (BB/U)
+                      </span>
+                      <span className='font-black bg-blue-300 px-2 py-0.5 border-2 border-black shadow-[2px_2px_0_0_#000]'>
+                        {aiResult.who_flags?.weight_for_age_z?.toFixed(2) ??
+                          "N/A"}
+                      </span>
+                    </div>
                   </div>
-                  <div className='flex justify-between items-center border-b-2 border-black border-dashed pb-2'>
-                    <span className='text-xs font-bold uppercase'>
-                      Z-Score (BB/U)
-                    </span>
-                    <span className='font-black bg-blue-300 px-2 py-0.5 border-2 border-black shadow-[2px_2px_0_0_#000]'>
-                      {aiResult.who_flags.weight_for_age_z.toFixed(2)}
-                    </span>
-                  </div>
-                </div>
+                )}
               </div>
             </div>
           );

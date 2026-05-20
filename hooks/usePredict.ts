@@ -18,13 +18,6 @@ export function usePredict() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const API_BASE =
-    process.env.NEXT_PUBLIC_API_BASE ||
-    "https://akazelll-stunting-predict.hf.space";
-
-  // PERBAIKAN: Ubah parameter 'name' dari keyof PredictInput → string
-  // agar kompatibel dengan InputProps.onChange = (name: string, val: string) => void
-  // Cast internal ke keyof PredictInput agar setForm tetap type-safe
   const handleChange = (name: string, val: string) => {
     const key = name as keyof PredictInput;
     setForm((prev) => ({
@@ -45,7 +38,8 @@ export function usePredict() {
     setResult(null);
 
     try {
-      const res = await fetch(`${API_BASE}/predict`, {
+      // PERBAIKAN DI SINI: Arahkan ke endpoint lokal Next.js
+      const res = await fetch("/api/predict", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(form),
@@ -53,7 +47,9 @@ export function usePredict() {
 
       if (!res.ok) {
         const errData = await res.json().catch(() => ({}));
-        throw new Error(errData?.detail || `Server error: ${res.status}`);
+        throw new Error(
+          errData?.error || errData?.detail || `Server error: ${res.status}`,
+        );
       }
 
       const data: PredictResult = await res.json();

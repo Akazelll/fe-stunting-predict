@@ -13,21 +13,21 @@ import { Badge } from "@/components/ui/badge";
 
 import { PredictInput, PredictResult } from "@/types/predict";
 
-// ✅ Diperbaiki: Semua status memiliki properti 'text' agar TypeScript tidak komplain
+// ✅ Diperbaiki: Key disesuaikan dengan nilai `risk_level` dari API ("Rendah", "Sedang", "Tinggi")
 const riskConfig = {
-  LOW: {
+  Rendah: {
     label: "RISIKO RENDAH",
     bg: "bg-green-400",
     text: "text-black",
     icon: "✅",
   },
-  MEDIUM: {
+  Sedang: {
     label: "RISIKO SEDANG",
     bg: "bg-yellow-400",
     text: "text-black",
     icon: "⚠️",
   },
-  HIGH: {
+  Tinggi: {
     label: "RISIKO TINGGI",
     bg: "bg-red-500",
     text: "text-white",
@@ -56,7 +56,6 @@ export default function PredictionHistoryDetailPage() {
     }
     fetchDetail();
   }, [predictionId, supabase]);
-
 
   if (isLoading) {
     return (
@@ -96,8 +95,11 @@ export default function PredictionHistoryDetailPage() {
 
   const inputData = prediction.input_data as PredictInput;
   const aiResult = prediction.input_data as unknown as PredictResult;
+
+  // ✅ Diperbaiki: Mengambil konfigurasi atau fallback secara aman ke `riskConfig.Rendah`
   const cfg =
-    riskConfig[(aiResult?.risk_level as keyof typeof riskConfig) || "LOW"];
+    riskConfig[aiResult?.risk_level as keyof typeof riskConfig] ||
+    riskConfig.Rendah;
 
   return (
     <AppLayout>
@@ -110,7 +112,6 @@ export default function PredictionHistoryDetailPage() {
         </div>
 
         {/* Header Section */}
-        {/* ✅ Diperbaiki: cfg.text sekarang dipanggil tanpa fallback karena semua config pasti punya */}
         <div
           className={`border-4 border-black shadow-[8px_8px_0_0_#000] flex flex-col md:flex-row justify-between items-start md:items-center p-6 md:p-8 gap-6 ${cfg.bg} ${cfg.text}`}
         >
@@ -131,7 +132,6 @@ export default function PredictionHistoryDetailPage() {
             </h1>
           </div>
 
-          {/* ✅ Diperbaiki: min-w-[200px] menjadi min-w-50 sesuai standar Tailwind */}
           <div className='bg-white border-4 border-black p-4 text-center min-w-50 shadow-[4px_4px_0_0_#000] text-black'>
             <p className='text-xs font-bold uppercase opacity-60 mb-1'>
               Status Hasil
@@ -194,13 +194,12 @@ export default function PredictionHistoryDetailPage() {
                 </h4>
 
                 {/* Bar Peluang Stunting */}
+                {/* ✅ Diperbaiki: Akses property sesuai tipe data yang benar */}
                 <div className='space-y-2'>
                   <div className='flex justify-between text-xs font-black uppercase'>
                     <span>Peluang Stunting</span>
                     <span>
-                      {((aiResult?.probability?.stunting || 0) * 100).toFixed(
-                        1,
-                      )}
+                      {((aiResult?.stunting_probability ?? 0) * 100).toFixed(1)}
                       %
                     </span>
                   </div>
@@ -208,20 +207,21 @@ export default function PredictionHistoryDetailPage() {
                     <div
                       className='h-full bg-red-400 border-r-2 border-black'
                       style={{
-                        width: `${(aiResult?.probability?.stunting || 0) * 100}%`,
+                        width: `${(aiResult?.stunting_probability ?? 0) * 100}%`,
                       }}
                     />
                   </div>
                 </div>
 
                 {/* Bar Peluang Normal */}
+                {/* ✅ Diperbaiki: Akses property normal menggunakan aiResult?.probabilities?.Normal */}
                 <div className='space-y-2'>
                   <div className='flex justify-between text-xs font-black uppercase'>
                     <span>Peluang Normal</span>
                     <span>
-                      {(
-                        (aiResult?.probability?.tidak_stunting || 0) * 100
-                      ).toFixed(1)}
+                      {((aiResult?.probabilities?.Normal ?? 0) * 100).toFixed(
+                        1,
+                      )}
                       %
                     </span>
                   </div>
@@ -229,7 +229,7 @@ export default function PredictionHistoryDetailPage() {
                     <div
                       className='h-full bg-green-400 border-r-2 border-black'
                       style={{
-                        width: `${(aiResult?.probability?.tidak_stunting || 0) * 100}%`,
+                        width: `${(aiResult?.probabilities?.Normal ?? 0) * 100}%`,
                       }}
                     />
                   </div>
@@ -249,8 +249,10 @@ export default function PredictionHistoryDetailPage() {
                         LAZ (Tinggi/Umur)
                       </span>
                       <span className='font-black bg-yellow-300 px-3 py-1 border-2 border-black shadow-[2px_2px_0_0_#000]'>
-                        {aiResult?.who_flags?.length_for_age_z?.toFixed(2) ??
-                          "0.00"}
+                        {/* Perhatikan: Anda mungkin perlu memberikan any cast sementara untuk who_flags jika error tipe masih muncul */}
+                        {(
+                          aiResult as any
+                        )?.who_flags?.length_for_age_z?.toFixed(2) ?? "0.00"}
                       </span>
                     </div>
 
@@ -259,8 +261,9 @@ export default function PredictionHistoryDetailPage() {
                         WAZ (Berat/Umur)
                       </span>
                       <span className='font-black bg-blue-300 px-3 py-1 border-2 border-black shadow-[2px_2px_0_0_#000]'>
-                        {aiResult?.who_flags?.weight_for_age_z?.toFixed(2) ??
-                          "0.00"}
+                        {(
+                          aiResult as any
+                        )?.who_flags?.weight_for_age_z?.toFixed(2) ?? "0.00"}
                       </span>
                     </div>
                   </div>
